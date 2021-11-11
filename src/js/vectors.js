@@ -17,7 +17,7 @@ function angleBetweenVectors(v1, v2) {
     return Math.acos(vMultVectorScalar(v1, v2));
 }
 function vMult(v1, v2) {
-
+    //
 }
 function vLength(v) {
     return Math.sqrt((v[0] * v[0]) + (v[1] * v[1]));

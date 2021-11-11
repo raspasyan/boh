@@ -13,6 +13,7 @@
 // CONTROL
 let mousePos = null;
 let lastMousePos = mousePos;
+let mouseStartPos = null;
 let controller = {
     mouse: false,
     up: false,
@@ -43,9 +44,10 @@ if (world) {
 // Viewer
 let view = {
     pos: [0, 0],
-    width: 512,
-    height: 512
+    width: 640,
+    height: 480
 };
+let viewStartPos = null;
 
 // Player
 let player = null;
@@ -78,6 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
     cvs.addEventListener("mousedown", function (e) {
         controller.mouse = true;
         mousePos = getMousePos(cvs, e);
+        mouseStartPos = getMousePos(cvs, e);
+        viewStartPos = [view.pos[0], view.pos[1]];
         click(mousePos);
     });
     cvs.addEventListener("mousemove", function (e) {
@@ -87,6 +91,12 @@ document.addEventListener("DOMContentLoaded", function () {
     cvs.addEventListener("mouseup", function (e) {
         controller.mouse = false;
     });
+    document.addEventListener("mouseup", function (e) {
+        controller.mouse = false;
+    });
+    // cvs.addEventListener("mouseleave", (e) => {
+    //     if (controller.mouse) controller.mouse = false;
+    // })
 
     var ctx = cvs.getContext("2d");
     // ctx.scale(2,2);
@@ -883,251 +893,261 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     function click(mousePos) {
         lastMousePos = mousePos;
+        // let mousePosDelta = vSub(mousePos, mouseStartPos);
+        let viewMousePos = vAdd(mousePos, view.pos);
+        let viewMouseStartPos = vAdd(mouseStartPos, view.pos);
+        let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
 
         if (mousePos[0] <= view.width && mousePos[1] <= view.height) {
-            mousePos[0] += view.pos[0];
-            mousePos[1] += view.pos[1];
+            // mousePos = vAdd(mousePos, view.pos);
+            // console.log(mousePos);
+
+            // let viewMousePos = vAdd(mousePos, view.pos);
+            // console.log(mousePos, viewMousePos);
 
             if (player) {
                 // Player control
                 // player.target = getReachablePos(player.pos, mousePos);
             } else {
-                mousePos = [Math.round(mousePos[0] / CELL_SIZE) * CELL_SIZE, Math.round(mousePos[1] / CELL_SIZE) * CELL_SIZE];
+                // mouseGridPos = [Math.round(mousePos[0] / CELL_SIZE) * CELL_SIZE, Math.round(mousePos[1] / CELL_SIZE) * CELL_SIZE];
                 let currentObject = null;
 
-                switch (editorObjectType) {
-                    case "sprite": {
-                        currentObject = {
-                            type: "sprite",
-                            size: CELL_SIZE
-                        };
-                        break;
-                    }
-                    case "block": {
-                        currentObject = {
-                            type: "block",
-                            size: CELL_SIZE
-                        };
-                        break;
-                    }
-                    case "trap": {
-                        currentObject = {
-                            type: "trap",
-                            dmg: 1,
-                            speed: 5,
-                            pos: [0, 0],
-                            size: CELL_SIZE
-                        };
-                        break;
-                    }
-                    case "guardian": {
-                        currentObject = {
-                            type: "creature",
-                            faction: "royal",
-                            respawn: [0, 30 * 60],
-                            speed: 2,
-                            sprite: [(0 * SPRITE_SIZE), (6 * SPRITE_SIZE)],
-                            hp: [15, 15],
-                            regen: [0, 180],
-                            attack: [0, 60],
-                            attackRange: CELL_SIZE * 1.5,
-                            attackSprite: [(15 * SPRITE_SIZE), (3 * SPRITE_SIZE)],
-                            attackSpriteRotation: true,
-                            attackSpeed: 5,
-                            attackPower: 3,
-                            dmg: 1,
-                            sight: DEFAULT_SIGHT,
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                    case "axeman": {
-                        currentObject = {
-                            type: "creature",
-                            faction: "royal",
-                            respawn: [0, 30 * 60],
-                            speed: 2,
-                            sprite: [(0 * SPRITE_SIZE), (5 * SPRITE_SIZE)],
-                            hp: [20, 20],
-                            regen: [0, 180],
-                            attack: [0, 60],
-                            attackRange: CELL_SIZE * 1.5,
-                            attackSprite: [(16 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
-                            attackSpriteRotation: true,
-                            attackSpeed: 5,
-                            attackPower: 5,
-                            dmg: 2,
-                            sight: DEFAULT_SIGHT,
-                            size: CELL_SIZE * 1.2
-                        }
-                        break;
-                    }
-                    case "archer": {
-                        currentObject = {
-                            type: "creature",
-                            faction: "royal",
-                            respawn: [0, 30 * 60],
-                            speed: 3,
-                            sprite: [(1 * SPRITE_SIZE), (6 * SPRITE_SIZE)],
-                            hp: [10, 10],
-                            regen: [0, 180],
-                            attack: [0, 60],
-                            attackRange: CELL_SIZE * 5,
-                            attackSprite: [(16 * SPRITE_SIZE), (3 * SPRITE_SIZE)],
-                            attackSpriteRotation: true,
-                            attackSpeed: 5,
-                            attackPower: 1,
-                            dmg: 1,
-                            sight: DEFAULT_SIGHT,
-                            size: CELL_SIZE * 1
-                        }
-                        break;
-                    }
-                    case "follower": {
-                        currentObject = {
-                            type: "creature",
-                            // proto: "wizard",
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                    case "peasant": {
-                        currentObject = {
-                            type: "creature",
-                            // proto: "peasant",
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                    case "goblin": {
-                        currentObject = {
-                            type: "creature",
-                            faction: "greenskin",
-                            respawn: [0, 30 * 60],
-                            speed: 3,
-                            sprite: [(0 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
-                            hp: [10, 10],
-                            regen: [0, 120],
-                            attack: [0, 60],
-                            attackRange: CELL_SIZE * 3,
-                            attackSprite: [(17 * SPRITE_SIZE), (5 * SPRITE_SIZE)],
-                            attackSpriteRotation: true,
-                            attackSpeed: 5,
-                            attackPower: 1,
-                            dmg: 1,
-                            sight: DEFAULT_SIGHT,
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                    case "orc": {
-                        currentObject = {
-                            type: "creature",
-                            faction: "greenskin",
-                            respawn: [0, 30 * 60],
-                            speed: 3,
-                            sprite: [(1 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
-                            hp: [20, 20],
-                            regen: [0, 120],
-                            attack: [0, 60],
-                            attackRange: CELL_SIZE * 1.5,
-                            attackSprite: [(16 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
-                            attackSpriteRotation: true,
-                            attackSpeed: 5,
-                            attackPower: 5,
-                            dmg: 2,
-                            sight: DEFAULT_SIGHT,
-                            size: CELL_SIZE * 1.2
-                        }
-                        break;
-                    }
-                    case "item_gold": {
-                        currentObject = {
-                            type: "item",
-                            itemType: "",
-                            use: [0, 30],
-                            useDistance: CELL_SIZE,
-                            useResults: {
-                                gold: 1,
-                                message: {
-                                    text: "+1",
-                                    color: "white",
-                                    sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
-                                }
-                            },
-                            sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE],
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                    case "palm_tree": {
-                        currentObject = {
-                            type: "item",
-                            itemType: "tree",
-                            use: [0, 180],
-                            useDistance: CELL_SIZE + 2,
-                            useResults: {
-                                gold: 3,
-                                message: {
-                                    text: "+3",
-                                    color: "white",
-                                    sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
-                                },
-                                sprite: [11 * SPRITE_SIZE, 2 * SPRITE_SIZE]
-                            },
-                            sprite: [13 * SPRITE_SIZE, 2 * SPRITE_SIZE],
-                            size: CELL_SIZE,
-                            solid: true
-                        }
-                        break;
-                    }
-                    case "wheat": {
-                        currentObject = {
-                            type: "item",
-                            itemType: "wheat",
-                            use: [0, 60],
-                            useDistance: CELL_SIZE + 2,
-                            useResults: {
-                                gold: 1,
-                                message: {
-                                    text: "+1",
-                                    color: "white",
-                                    sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
-                                },
-                                // sprite: [11 * SPRITE_SIZE, 2 * SPRITE_SIZE]
-                            },
-                            sprite: [14 * SPRITE_SIZE, 11 * SPRITE_SIZE],
-                            sprites: [
-                                [11 * SPRITE_SIZE, 11 * SPRITE_SIZE],
-                                [12 * SPRITE_SIZE, 11 * SPRITE_SIZE],
-                                [13 * SPRITE_SIZE, 11 * SPRITE_SIZE],
-                                [14 * SPRITE_SIZE, 11 * SPRITE_SIZE]
-                            ],
-                            state: [0, 180],
-                            states: [0, 3],
-                            size: CELL_SIZE
-                        }
-                        break;
-                    }
-                }
+                // Move view
+                view.pos = vAdd(viewStartPos, viewMousePosDelta);
 
-                if (editorRemover) {
-                    let search = objects.filter(function (obj) {
-                        return obj.pos[0] == mousePos[0] && obj.pos[1] == mousePos[1] && obj.type == currentObject.type;
-                    });
-                    if (search.length) dropObj(objects, search[0]);
-                } else {
-                    let search = objects.filter(function (obj) {
-                        return obj.pos[0] == mousePos[0] && obj.pos[1] == mousePos[1] && obj.type == currentObject.type;
-                    });
-                    if (search.length) dropObj(objects, search[0]);
+                // switch (editorObjectType) {
+                //     case "sprite": {
+                //         currentObject = {
+                //             type: "sprite",
+                //             size: CELL_SIZE
+                //         };
+                //         break;
+                //     }
+                //     case "block": {
+                //         currentObject = {
+                //             type: "block",
+                //             size: CELL_SIZE
+                //         };
+                //         break;
+                //     }
+                //     case "trap": {
+                //         currentObject = {
+                //             type: "trap",
+                //             dmg: 1,
+                //             speed: 5,
+                //             pos: [0, 0],
+                //             size: CELL_SIZE
+                //         };
+                //         break;
+                //     }
+                //     case "guardian": {
+                //         currentObject = {
+                //             type: "creature",
+                //             faction: "royal",
+                //             respawn: [0, 30 * 60],
+                //             speed: 2,
+                //             sprite: [(0 * SPRITE_SIZE), (6 * SPRITE_SIZE)],
+                //             hp: [15, 15],
+                //             regen: [0, 180],
+                //             attack: [0, 60],
+                //             attackRange: CELL_SIZE * 1.5,
+                //             attackSprite: [(15 * SPRITE_SIZE), (3 * SPRITE_SIZE)],
+                //             attackSpriteRotation: true,
+                //             attackSpeed: 5,
+                //             attackPower: 3,
+                //             dmg: 1,
+                //             sight: DEFAULT_SIGHT,
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                //     case "axeman": {
+                //         currentObject = {
+                //             type: "creature",
+                //             faction: "royal",
+                //             respawn: [0, 30 * 60],
+                //             speed: 2,
+                //             sprite: [(0 * SPRITE_SIZE), (5 * SPRITE_SIZE)],
+                //             hp: [20, 20],
+                //             regen: [0, 180],
+                //             attack: [0, 60],
+                //             attackRange: CELL_SIZE * 1.5,
+                //             attackSprite: [(16 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
+                //             attackSpriteRotation: true,
+                //             attackSpeed: 5,
+                //             attackPower: 5,
+                //             dmg: 2,
+                //             sight: DEFAULT_SIGHT,
+                //             size: CELL_SIZE * 1.2
+                //         }
+                //         break;
+                //     }
+                //     case "archer": {
+                //         currentObject = {
+                //             type: "creature",
+                //             faction: "royal",
+                //             respawn: [0, 30 * 60],
+                //             speed: 3,
+                //             sprite: [(1 * SPRITE_SIZE), (6 * SPRITE_SIZE)],
+                //             hp: [10, 10],
+                //             regen: [0, 180],
+                //             attack: [0, 60],
+                //             attackRange: CELL_SIZE * 5,
+                //             attackSprite: [(16 * SPRITE_SIZE), (3 * SPRITE_SIZE)],
+                //             attackSpriteRotation: true,
+                //             attackSpeed: 5,
+                //             attackPower: 1,
+                //             dmg: 1,
+                //             sight: DEFAULT_SIGHT,
+                //             size: CELL_SIZE * 1
+                //         }
+                //         break;
+                //     }
+                //     case "follower": {
+                //         currentObject = {
+                //             type: "creature",
+                //             // proto: "wizard",
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                //     case "peasant": {
+                //         currentObject = {
+                //             type: "creature",
+                //             // proto: "peasant",
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                //     case "goblin": {
+                //         currentObject = {
+                //             type: "creature",
+                //             faction: "greenskin",
+                //             respawn: [0, 30 * 60],
+                //             speed: 3,
+                //             sprite: [(0 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
+                //             hp: [10, 10],
+                //             regen: [0, 120],
+                //             attack: [0, 60],
+                //             attackRange: CELL_SIZE * 3,
+                //             attackSprite: [(17 * SPRITE_SIZE), (5 * SPRITE_SIZE)],
+                //             attackSpriteRotation: true,
+                //             attackSpeed: 5,
+                //             attackPower: 1,
+                //             dmg: 1,
+                //             sight: DEFAULT_SIGHT,
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                //     case "orc": {
+                //         currentObject = {
+                //             type: "creature",
+                //             faction: "greenskin",
+                //             respawn: [0, 30 * 60],
+                //             speed: 3,
+                //             sprite: [(1 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
+                //             hp: [20, 20],
+                //             regen: [0, 120],
+                //             attack: [0, 60],
+                //             attackRange: CELL_SIZE * 1.5,
+                //             attackSprite: [(16 * SPRITE_SIZE), (4 * SPRITE_SIZE)],
+                //             attackSpriteRotation: true,
+                //             attackSpeed: 5,
+                //             attackPower: 5,
+                //             dmg: 2,
+                //             sight: DEFAULT_SIGHT,
+                //             size: CELL_SIZE * 1.2
+                //         }
+                //         break;
+                //     }
+                //     case "item_gold": {
+                //         currentObject = {
+                //             type: "item",
+                //             itemType: "",
+                //             use: [0, 30],
+                //             useDistance: CELL_SIZE,
+                //             useResults: {
+                //                 gold: 1,
+                //                 message: {
+                //                     text: "+1",
+                //                     color: "white",
+                //                     sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
+                //                 }
+                //             },
+                //             sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE],
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                //     case "palm_tree": {
+                //         currentObject = {
+                //             type: "item",
+                //             itemType: "tree",
+                //             use: [0, 180],
+                //             useDistance: CELL_SIZE + 2,
+                //             useResults: {
+                //                 gold: 3,
+                //                 message: {
+                //                     text: "+3",
+                //                     color: "white",
+                //                     sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
+                //                 },
+                //                 sprite: [11 * SPRITE_SIZE, 2 * SPRITE_SIZE]
+                //             },
+                //             sprite: [13 * SPRITE_SIZE, 2 * SPRITE_SIZE],
+                //             size: CELL_SIZE,
+                //             solid: true
+                //         }
+                //         break;
+                //     }
+                //     case "wheat": {
+                //         currentObject = {
+                //             type: "item",
+                //             itemType: "wheat",
+                //             use: [0, 60],
+                //             useDistance: CELL_SIZE + 2,
+                //             useResults: {
+                //                 gold: 1,
+                //                 message: {
+                //                     text: "+1",
+                //                     color: "white",
+                //                     sprite: [15 * SPRITE_SIZE, 7 * SPRITE_SIZE]
+                //                 },
+                //                 // sprite: [11 * SPRITE_SIZE, 2 * SPRITE_SIZE]
+                //             },
+                //             sprite: [14 * SPRITE_SIZE, 11 * SPRITE_SIZE],
+                //             sprites: [
+                //                 [11 * SPRITE_SIZE, 11 * SPRITE_SIZE],
+                //                 [12 * SPRITE_SIZE, 11 * SPRITE_SIZE],
+                //                 [13 * SPRITE_SIZE, 11 * SPRITE_SIZE],
+                //                 [14 * SPRITE_SIZE, 11 * SPRITE_SIZE]
+                //             ],
+                //             state: [0, 180],
+                //             states: [0, 3],
+                //             size: CELL_SIZE
+                //         }
+                //         break;
+                //     }
+                // }
 
-                    currentObject.pos = [mousePos[0], mousePos[1]];
-                    if (currentObject.sprite == undefined) currentObject.sprite = [editorSpriteOffsets[0] * SPRITE_SIZE, editorSpriteOffsets[1] * SPRITE_SIZE];
-                    if (currentObject.spawn) currentObject.spawn = currentObject.pos;
-                    // if (currentObject.type == "sprite" && editorAnimation) currentObject.animation = 0;
-                    objects.push(currentObject);
-                }
+                // if (editorRemover) {
+                //     let search = objects.filter(function (obj) {
+                //         return obj.pos[0] == mousePos[0] && obj.pos[1] == mousePos[1] && obj.type == currentObject.type;
+                //     });
+                //     if (search.length) dropObj(objects, search[0]);
+                // } else {
+                //     let search = objects.filter(function (obj) {
+                //         return obj.pos[0] == mousePos[0] && obj.pos[1] == mousePos[1] && obj.type == currentObject.type;
+                //     });
+                //     if (search.length) dropObj(objects, search[0]);
+
+                //     currentObject.pos = [mousePos[0], mousePos[1]];
+                //     if (currentObject.sprite == undefined) currentObject.sprite = [editorSpriteOffsets[0] * SPRITE_SIZE, editorSpriteOffsets[1] * SPRITE_SIZE];
+                //     if (currentObject.spawn) currentObject.spawn = currentObject.pos;
+                //     // if (currentObject.type == "sprite" && editorAnimation) currentObject.animation = 0;
+                //     objects.push(currentObject);
+                // }
             }
         } else {
             mousePos[1] -= view.height;
