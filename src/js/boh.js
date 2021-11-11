@@ -12,9 +12,9 @@
 
 // CONTROL
 let mouse = {
-    pos: null,
-    lastPos: null,
-    startPos: null
+    pos: [0, 0],
+    lastPos: [0, 0],
+    startPos: [0, 0]
 }
 
 let controller = {
@@ -29,13 +29,14 @@ let controller = {
 // LEVEL EDITOR
 let editor = {
     'enabled': true,
-    'mode': null,
+    'mode': 'view',
     'elements': [
         {
             'title': 'viewControl',
             'pos': [CELL_SIZE, CELL_SIZE],
             'size': CELL_SIZE,
             'active': true,
+            'selected': false,
             'sprite': [10, 10],
             'mode': 'view'
         },
@@ -44,6 +45,7 @@ let editor = {
             'pos': [CELL_SIZE + (CELL_SIZE + 4) * 1, CELL_SIZE],
             'size': CELL_SIZE,
             'active': false,
+            'selected': false,
             'sprite': [15, 0],
             'mode': 'draw'
         }
@@ -61,10 +63,7 @@ let DEBUG = 1;
 
 // Loading objects
 let world = localStorage.getItem("world");
-if (world) {
-    console.info("LOADED");
-    objects = JSON.parse(world);
-}
+if (world) objects = JSON.parse(world);
 
 // Viewer
 let view = {
@@ -105,17 +104,20 @@ document.addEventListener("DOMContentLoaded", function () {
     ctx.imageSmoothingEnabled = false;
 
     cvs.addEventListener("mousedown", function (e) {
-        controller.mouse = true;
         mouse.pos = getMousePos(cvs, e);
         mouse.startPos = getMousePos(cvs, e);
         view.startPos = [view.pos[0], view.pos[1]];
-        click();
+
+        controller.mouse = true;
     });
     cvs.addEventListener("mousemove", function (e) {
         mouse.pos = getMousePos(cvs, e);
-        if (controller.mouse && (!mouse.lastPos || mouse.pos[0] != mouse.lastPos[0] || mouse.pos[1] != mouse.lastPos[1])) click();
+        if (controller.mouse && (!mouse.lastPos || mouse.pos[0] != mouse.lastPos[0] || mouse.pos[1] != mouse.lastPos[1])) drag();
     });
     cvs.addEventListener("mouseup", function (e) {
+        mouse.pos = getMousePos(cvs, e);
+        click();
+
         controller.mouse = false;
     });
     document.addEventListener("mouseup", function (e) {
@@ -224,20 +226,22 @@ function render(cvs, ctx) {
     // }
 
     // Draw sprites
-    let sprites = objects.filter((obj) => obj.type == "sprite");
+    let sprites = objects.filter(obj => obj.type == "sprite");
     if (sprites.length) drawSprites(ctx, sprites);
 
-    // // Draw blocks
-    // if (!player || DEBUG) {
-    //     let blocks = objects.filter(function (obj) { return obj.type == "block"; });
-    //     blocks.forEach(function (obj) {
-    //         ctx.strokeStyle = (obj.visible ? "blue" : "red");
-    //         ctx.beginPath();
-    //         ctx.arc(obj.pos[0] - view.pos[0], obj.pos[1] - view.pos[1], obj.size / 2, 0, Math.PI * 2, true);
-    //         ctx.closePath();
-    //         ctx.stroke();
-    //     });
-    // }
+    // Draw blocks
+    if (DEBUG) {
+        let blocks = objects.filter(obj => obj.type == "block");
+        blocks.forEach(obj => {
+            obj.selected = onMouseInView(mouse, obj);
+
+            ctx.strokeStyle = (obj.selected ? "blue" : "red");
+            ctx.beginPath();
+            ctx.arc(obj.pos[0] - view.pos[0], obj.pos[1] - view.pos[1], obj.size / 2, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.stroke();
+        });
+    }
 
     // // Draw traps
     // if (!player || DEBUG) {
@@ -336,6 +340,7 @@ function render(cvs, ctx) {
         ctx.strokeRect(0, 0, view.width, view.height);
     }
 }
+
 function drawSprites(ctx, sprites) {
     sprites.forEach(function (obj) {
         if (inView(obj.pos, obj.size)) {
@@ -947,9 +952,9 @@ function drawItems(ctx, items) {
 }
 function drawEditor(ctx) {
     editor.elements.forEach(element => {
-        if (element.active) editor.mode = element.mode;
+        element.selected = onMouse(mouse, element);
 
-        ctx.fillStyle = "VIOLET";
+        ctx.fillStyle = (element.selected ? 'GOLD' : "VIOLET");
         ctx.fillRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
 
         ctx.strokeStyle = (element.active ? 'LIME' : 'RED');
@@ -958,7 +963,31 @@ function drawEditor(ctx) {
         ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), CELL_SIZE, CELL_SIZE);
     });
 }
+function handleEditor() {
+    let haveSelected = editor.elements.filter((e) => e.selected);
+    if (haveSelected.length) editor.elements.forEach(element => {
+        element.active = element.selected;
+
+        // element.selected = onMouse(mouse, element);
+
+        // ctx.fillStyle = (element.selected ? 'GOLD' : "VIOLET");
+        // ctx.fillRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
+
+        // ctx.strokeStyle = (element.active ? 'LIME' : 'RED');
+        // ctx.strokeRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
+
+        // ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), CELL_SIZE, CELL_SIZE);
+    }); 
+}
 function click() {
+    mouse.lastPos = mouse.pos;
+    let viewMousePos = vAdd(mouse.pos, view.pos);
+    let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
+    let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
+
+    if (editor.enabled) handleEditor();
+}
+function drag() {
     mouse.lastPos = mouse.pos;
     let viewMousePos = vAdd(mouse.pos, view.pos);
     let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
@@ -971,6 +1000,13 @@ function click() {
         // Game && editor view control
         view.pos = vAdd(view.startPos, viewMousePosDelta);
     }
+}
+function onMouse(mouse, obj) {
+    return (mouse.pos != null && mouse.pos[0] >= obj.pos[0] - (obj.size / 2) && mouse.pos[0] <= obj.pos[0] + (obj.size / 2) && mouse.pos[1] >= obj.pos[1] - (obj.size / 2) && mouse.pos[1] <= obj.pos[1] + (obj.size / 2));
+}
+function onMouseInView(mouse, obj) {
+    let viewMousePos = vAdd(mouse.pos, view.pos);
+    return (mouse.pos != null && viewMousePos[0] >= obj.pos[0] - (obj.size / 2) && viewMousePos[0] <= obj.pos[0] + (obj.size / 2) && viewMousePos[1] >= obj.pos[1] - (obj.size / 2) && viewMousePos[1] <= obj.pos[1] + (obj.size / 2));
 }
 function respawn() {
     let deadCreatures = objects.filter(function (obj) { return obj.spawn && !obj.hp[0] });
