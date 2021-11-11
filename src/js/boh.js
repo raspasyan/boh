@@ -30,25 +30,69 @@ let controller = {
 let editor = {
     'enabled': true,
     'mode': 'view',
+    'drawLayer': 0,
+    'drawAnimate': 0,
+    'eraserMode': false,
+    'pos': [0, 0],
     'elements': [
         {
-            'title': 'viewControl',
             'pos': [CELL_SIZE, CELL_SIZE],
             'size': CELL_SIZE,
             'active': true,
             'selected': false,
             'sprite': [10, 10],
-            'mode': 'view'
+            'mode': 'view',
+            'layer': 0
         },
         {
-            'title': 'drawSprites',
             'pos': [CELL_SIZE + (CELL_SIZE + 4) * 1, CELL_SIZE],
             'size': CELL_SIZE,
             'active': false,
             'selected': false,
-            'sprite': [15, 0],
-            'mode': 'draw'
-        }
+            'sprite': [11, 1],
+            'mode': 'draw',
+            'drawLayer': 0,
+            'layer': 0
+        },
+        {
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 1, CELL_SIZE + (CELL_SIZE + 4) * 1],
+            'size': CELL_SIZE,
+            'active': false,
+            'selected': false,
+            'sprite': [13, 0],
+            'mode': 'draw',
+            'drawLayer': 1,
+            'layer': 0
+        },
+        {
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 1, CELL_SIZE + (CELL_SIZE + 4) * 2],
+            'size': CELL_SIZE / 2,
+            'active': false,
+            'selected': false,
+            'sprite': [17, 2],
+            'mode': 'animate',
+            'toggle': true,
+            'layer': 2
+        },
+        {
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 2, CELL_SIZE],
+            'size': CELL_SIZE,
+            'active': false,
+            'selected': false,
+            'sprite': [1, 7],
+            'mode': 'place',
+            'layer': 0
+        },
+        {
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 3, CELL_SIZE],
+            'size': CELL_SIZE / 2,
+            'active': false,
+            'selected': false,
+            'sprite': [15, 1],
+            'mode': 'erase',
+            'toggle': true,
+            'layer': 1
+        },
     ]
 }
 // let editorSpriteOffsets = [0, 0];
@@ -63,7 +107,39 @@ let DEBUG = 1;
 
 // Loading objects
 let world = localStorage.getItem("world");
-if (world) objects = JSON.parse(world);
+if (world) {
+    world = JSON.parse(world);
+} else {
+    world = {
+        'sprites': [
+            {
+                'pos': [0,0],
+                'sprite': [1,1],
+                'size': CELL_SIZE,
+                'layer': 0
+            },
+            {
+                'pos': [32,0],
+                'sprite': [1,1],
+                'size': CELL_SIZE,
+                'layer': 0
+            },
+            {
+                'pos': [0,32],
+                'sprite': [1,1],
+                'size': CELL_SIZE,
+                'layer': 0
+            },
+            {
+                'pos': [0,0],
+                'sprite': [2,2],
+                'size': CELL_SIZE,
+                'layer': 1,
+                'animation': 0
+            }
+        ]
+    }
+}
 
 // Viewer
 let view = {
@@ -155,7 +231,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (e.code == "Space") {
                 console.info("SAVED");
-                localStorage.setItem("world", JSON.stringify(objects));
+                localStorage.setItem("world", JSON.stringify(world));
             }
         }
     });
@@ -226,8 +302,7 @@ function render(cvs, ctx) {
     // }
 
     // Draw sprites
-    let sprites = objects.filter(obj => obj.type == "sprite");
-    if (sprites.length) drawSprites(ctx, sprites);
+    if (world.sprites.length) drawSprites(ctx, world.sprites);
 
     // Draw blocks
     if (DEBUG) {
@@ -335,34 +410,48 @@ function render(cvs, ctx) {
     if (editor.enabled) drawEditor(ctx);
 
     // // Draw view
-    if (DEBUG || !player) {
-        ctx.strokeStyle = "red";
-        ctx.strokeRect(0, 0, view.width, view.height);
+    if (DEBUG) {
+        // ctx.strokeStyle = "red";
+        // let viewDelta = [view.pos[0] - Math.floor(view.pos[0] / CELL_SIZE) * CELL_SIZE, view.pos[1] - Math.floor(view.pos[1] / CELL_SIZE) * CELL_SIZE];
+        // console.log(viewDelta);
+        // let mousePosGrid = [Math.floor(mouse.pos[0] / CELL_SIZE) * CELL_SIZE, Math.floor(mouse.pos[1] / CELL_SIZE) * CELL_SIZE];
+        // mousePosGrid = vAdd(mousePosGrid, view.pos);
+        // console.log(mousePosGrid);
+
+        // ctx.strokeRect(mousePosGrid[0], mousePosGrid[1], CELL_SIZE, CELL_SIZE);
+        // console.log(vAdd(mouse.pos, view.pos));
     }
 }
 
 function drawSprites(ctx, sprites) {
-    sprites.forEach(function (obj) {
-        if (inView(obj.pos, obj.size)) {
-            let imageToDraw = obj.sprite;
-
-            if (obj.animation != undefined) {
-                if (obj.animation != undefined) {
-                    obj.animation += .1;
-                } else {
-                    obj.animation = 0;
-                }
-
-                ctx.save();
-                ctx.translate(Math.round(obj.pos[0] - view.pos[0]), Math.round(obj.pos[1] - view.pos[1] + Math.round(obj.size / 2)));
-                ctx.rotate((Math.cos(obj.animation) * 5) * Math.PI / 180);
-                ctx.drawImage(TILESET, imageToDraw[0], imageToDraw[1], SPRITE_SIZE, SPRITE_SIZE, - Math.round(obj.size / 2) , - Math.round(obj.size), obj.size, obj.size);
-                ctx.restore();
-            } else {
-                ctx.drawImage(TILESET, imageToDraw[0], imageToDraw[1], SPRITE_SIZE, SPRITE_SIZE, Math.round(obj.pos[0] - Math.round(obj.size / 2) - view.pos[0]), Math.round(obj.pos[1] - Math.round(obj.size / 2) - view.pos[1]), obj.size, obj.size);
-            }
-        }
+    let spritesDown = sprites.filter(e => e.layer == 0);
+    if (spritesDown.length) spritesDown.forEach(element => {
+        if (inView(element.pos, element.size)) drawSprite(ctx, element);
     });
+
+    let spritesUp = sprites.filter(e => e.layer == 1);
+    if (spritesUp.length) spritesUp.forEach(element => {
+        if (inView(element.pos, element.size)) drawSprite(ctx, element);
+    });
+}
+function drawSprite(ctx, element) {
+    let imageToDraw = element.sprite;
+
+    if (element.animation != undefined) {
+        if (element.animation != undefined) {
+            element.animation += .1;
+        } else {
+            element.animation = 0;
+        }
+
+        ctx.save();
+        ctx.translate(Math.round(element.pos[0] - view.pos[0]), Math.round(element.pos[1] - view.pos[1] + Math.round(element.size / 2)));
+        ctx.rotate((Math.cos(element.animation) * 5) * Math.PI / 180);
+        ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(element.size / 2) , - Math.round(element.size), element.size, element.size);
+        ctx.restore();
+    } else {
+        ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(element.pos[0] - Math.round(element.size / 2) - view.pos[0]), Math.round(element.pos[1] - Math.round(element.size / 2) - view.pos[1]), element.size, element.size);
+    }
 }
 function drawProjectiles(ctx, projectiles, creatures) {
     projectiles.forEach(function (obj) {
@@ -950,35 +1039,58 @@ function drawItems(ctx, items) {
         }
     });
 }
+
+// EDITOR
 function drawEditor(ctx) {
     editor.elements.forEach(element => {
         element.selected = onMouse(mouse, element);
 
         ctx.fillStyle = (element.selected ? 'GOLD' : "VIOLET");
-        ctx.fillRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
+        ctx.fillRect(editor.pos[0] + element.pos[0] - (element.size / 2), editor.pos[1] + element.pos[1] - (element.size / 2), element.size, element.size);
 
         ctx.strokeStyle = (element.active ? 'LIME' : 'RED');
-        ctx.strokeRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
+        ctx.strokeRect(editor.pos[0] + element.pos[0] - (element.size / 2), editor.pos[1] + element.pos[1] - (element.size / 2), element.size, element.size);
 
-        ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), CELL_SIZE, CELL_SIZE);
+        ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, editor.pos[0] + element.pos[0] - (element.size / 2), editor.pos[1] + element.pos[1] - (element.size / 2), element.size, element.size);
     });
 }
 function handleEditor() {
     let haveSelected = editor.elements.filter((e) => e.selected);
     if (haveSelected.length) editor.elements.forEach(element => {
-        element.active = element.selected;
+        if (element.selected) {
+            let sameLayerElements = editor.elements.filter((e) => element.layer == e.layer && !e.toggle);
+            if (sameLayerElements.length) sameLayerElements.forEach(e => e.active = false);
+            console.log(element.active);
+            // if (element.active)
+            element.active = !element.active;
 
-        // element.selected = onMouse(mouse, element);
-
-        // ctx.fillStyle = (element.selected ? 'GOLD' : "VIOLET");
-        // ctx.fillRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
-
-        // ctx.strokeStyle = (element.active ? 'LIME' : 'RED');
-        // ctx.strokeRect(element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), element.size, element.size);
-
-        // ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, element.pos[0] - (element.size / 2), element.pos[1] - (element.size / 2), CELL_SIZE, CELL_SIZE);
+            switch (element.mode) {
+                case "view": {
+                    editor.mode = element.mode;
+                    break;   
+                }
+                case "draw": {
+                    editor.mode = element.mode;
+                    editor.drawLayer = element.drawLayer;
+                    break;   
+                }
+                case "animate": {
+                    editor.drawAnimate = element.active;
+                    break;   
+                }
+                case "place": {
+                    editor.mode = element.mode;
+                    break;   
+                }
+                case "erase": {
+                    editor.eraserMode = element.active;
+                    break;   
+                }
+            }
+        }
     }); 
 }
+
 function click() {
     mouse.lastPos = mouse.pos;
     let viewMousePos = vAdd(mouse.pos, view.pos);
@@ -993,9 +1105,26 @@ function drag() {
     let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
     let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
 
-    // Move view
     if (editor.enabled && editor.mode != 'view') {
         // Editor
+        let viewMousePosGrid = [Math.floor((viewMousePos[0] + (CELL_SIZE / 2)) / CELL_SIZE) * CELL_SIZE, Math.floor((viewMousePos[1] + (CELL_SIZE / 2)) / CELL_SIZE) * CELL_SIZE];
+        
+        switch (editor.mode) {
+            case "draw": {
+                let objectsToReplace = world.sprites.filter(e => e.pos[0] == viewMousePosGrid[0] && e.pos[1] == viewMousePosGrid[1] && e.layer == editor.drawLayer);
+                if (objectsToReplace.length) objectsToReplace.forEach(e => dropObj(world.sprites, e));
+
+                if (!editor.eraserMode) world.sprites.push({
+                    'pos': viewMousePosGrid,
+                    'sprite': [Math.round(Math.random() * 8),Math.round(Math.random() * 8)],
+                    'size': CELL_SIZE,
+                    'layer': editor.drawLayer,
+                    'animation': (editor.drawAnimate ? 0 : null)
+                });
+
+                break;
+            }
+        }
     } else {
         // Game && editor view control
         view.pos = vAdd(view.startPos, viewMousePosDelta);
