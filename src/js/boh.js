@@ -23,12 +23,14 @@ let controller = {
     right: false,
     down: false,
     left: false,
-    use: false
+    use: false,
+    dragMap: false,
+    dragCreature: null
 }
 
 // LEVEL EDITOR
 let editor = {
-    'enabled': true,
+    'enabled': false,
     'mode': 'view',
     'drawLayer': 0,
     'drawAnimate': 0,
@@ -84,7 +86,7 @@ let editor = {
             'layer': 0
         },
         {
-            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 3, CELL_SIZE],
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 0, CELL_SIZE + (CELL_SIZE + 4) * 1],
             'size': CELL_SIZE / 2,
             'active': false,
             'selected': false,
@@ -93,13 +95,17 @@ let editor = {
             'toggle': true,
             'layer': 1
         },
+        {
+            'pos': [CELL_SIZE + (CELL_SIZE + 4) * 3, CELL_SIZE],
+            'size': CELL_SIZE / 2,
+            'active': false,
+            'selected': false,
+            'sprite': [18, 0],
+            'mode': 'test',
+            'layer': 0
+        },
     ]
 }
-// let editorSpriteOffsets = [0, 0];
-// let editorRemover = false;
-// let editorAnimation = false;
-// let editorVisibleBlock = false;
-// let editorObjectType = "sprite";
 
 // DEBUG
 let AI = 1;
@@ -113,30 +119,23 @@ if (world) {
     world = {
         'sprites': [
             {
-                'pos': [0,0],
-                'sprite': [1,1],
+                'pos': [0, 0],
+                'sprite': [1, 1],
                 'size': CELL_SIZE,
                 'layer': 0
-            },
-            {
-                'pos': [32,0],
-                'sprite': [1,1],
-                'size': CELL_SIZE,
-                'layer': 0
-            },
-            {
-                'pos': [0,32],
-                'sprite': [1,1],
-                'size': CELL_SIZE,
-                'layer': 0
-            },
-            {
-                'pos': [0,0],
-                'sprite': [2,2],
-                'size': CELL_SIZE,
-                'layer': 1,
-                'animation': 0
             }
+        ],
+        'creatures': [
+            {
+                'pos': [0, 0],
+                'sprite': [0, 6],
+                'size': CELL_SIZE,
+                'target': null,
+                'speed': 2
+            }
+        ],
+        'projectiles': [
+            // 
         ]
     }
 }
@@ -179,22 +178,23 @@ document.addEventListener("DOMContentLoaded", function () {
     let ctx = cvs.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    cvs.addEventListener("mousedown", function (e) {
+    cvs.addEventListener("mousedown", e => {
         mouse.pos = getMousePos(cvs, e);
         mouse.startPos = getMousePos(cvs, e);
         view.startPos = [view.pos[0], view.pos[1]];
 
         controller.mouse = true;
-    });
-    cvs.addEventListener("mousemove", function (e) {
-        mouse.pos = getMousePos(cvs, e);
-        if (controller.mouse && (!mouse.lastPos || mouse.pos[0] != mouse.lastPos[0] || mouse.pos[1] != mouse.lastPos[1])) drag();
-    });
-    cvs.addEventListener("mouseup", function (e) {
-        mouse.pos = getMousePos(cvs, e);
-        click();
 
+        onClickHandler();
+    });
+    cvs.addEventListener("mousemove", e => {
+        mouse.pos = getMousePos(cvs, e);
+        if (controller.mouse && (!mouse.lastPos || mouse.pos[0] != mouse.lastPos[0] || mouse.pos[1] != mouse.lastPos[1])) onDragHandler();
+    });
+    cvs.addEventListener("mouseup", e => {
         controller.mouse = false;
+        controller.dragMap = false,
+        controller.dragCreature = false;
     });
     document.addEventListener("mouseup", function (e) {
         controller.mouse = false;
@@ -304,19 +304,25 @@ function render(cvs, ctx) {
     // Draw sprites
     if (world.sprites.length) drawSprites(ctx, world.sprites);
 
-    // Draw blocks
-    if (DEBUG) {
-        let blocks = objects.filter(obj => obj.type == "block");
-        blocks.forEach(obj => {
-            obj.selected = onMouseInView(mouse, obj);
+    // Draw objects
+    if (world.projectiles.length) drawProjectiles(ctx, world.projectiles);
 
-            ctx.strokeStyle = (obj.selected ? "blue" : "red");
-            ctx.beginPath();
-            ctx.arc(obj.pos[0] - view.pos[0], obj.pos[1] - view.pos[1], obj.size / 2, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.stroke();
-        });
-    }
+    // Draw creatures
+    if (world.creatures.length) drawCreatures(ctx, world.creatures);
+
+    // Draw blocks
+    // if (DEBUG) {
+    //     let blocks = objects.filter(obj => obj.type == "block");
+    //     blocks.forEach(obj => {
+    //         obj.selected = onMouseInView(mouse, obj);
+
+    //         ctx.strokeStyle = (obj.selected ? "blue" : "red");
+    //         ctx.beginPath();
+    //         ctx.arc(obj.pos[0] - view.pos[0], obj.pos[1] - view.pos[1], obj.size / 2, 0, Math.PI * 2, true);
+    //         ctx.closePath();
+    //         ctx.stroke();
+    //     });
+    // }
 
     // // Draw traps
     // if (!player || DEBUG) {
@@ -453,7 +459,67 @@ function drawSprite(ctx, element) {
         ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(element.pos[0] - Math.round(element.size / 2) - view.pos[0]), Math.round(element.pos[1] - Math.round(element.size / 2) - view.pos[1]), element.size, element.size);
     }
 }
-function drawProjectiles(ctx, projectiles, creatures) {
+
+function drawProjectiles(ctx, elements) {
+    elements.forEach(element => {
+        let getNextPos = (element.points.length == 2 ? getNextPosByBezierTwo: getNextPosByBezierThree);
+
+        if (element.t == undefined) element.t = 0;
+        element.pos = getNextPos(element.t, element.points);
+        element.t += element.speed;
+        if (element.t >= 1) dropObj(elements, element);
+
+        if (inView(element.pos, element.size)) {
+            let nextPos = getNextPos(element.t, element.points);
+            let rad = angleBetweenVectors(vNormal(vSub(element.pos, nextPos)), [-1,0]);
+            let cf = (element.pos[1] < nextPos[1] ? -1 : 1);
+            let angle = rad * cf * 180 / Math.PI;
+
+            if (element.rotation != undefined && element.rotation) {
+                ctx.save();
+                ctx.translate(Math.round(element.pos[0] - view.pos[0]), Math.round(element.pos[1] - view.pos[1]));
+                ctx.rotate((-0 - angle) * Math.PI / 180);
+                ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+                ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(element.size / 2) , - Math.round(element.size / 2), element.size, element.size);
+                ctx.restore();
+            } else {
+                ctx.drawImage(TILESET, currentProjectile.sprite[0], currentProjectile.sprite[1], SPRITE_SIZE, SPRITE_SIZE, Math.round(currentProjectile.pos[0] - Math.round(currentProjectile.size / 2) - view.pos[0]), Math.round(currentProjectile.pos[1] - Math.round(currentProjectile.size / 2) - view.pos[1]), currentProjectile.size, currentProjectile.size);
+            }
+
+            // if (element.animation != undefined) {
+            //     if (element.animation != undefined) {
+            //         element.animation += .1;
+            //     } else {
+            //         element.animation = 0;
+            //     }
+
+            //     ctx.save();
+            //     ctx.translate(Math.round(element.pos[0] - view.pos[0]), Math.round(element.pos[1] - view.pos[1] + Math.round(element.size / 2)));
+            //     ctx.rotate((Math.cos(element.animation) * 5) * Math.PI / 180);
+            //     ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(element.size / 2) , - Math.round(element.size), element.size, element.size);
+            //     ctx.restore();
+            // } else {
+            //     ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(element.pos[0] - Math.round(element.size / 2) - view.pos[0]), Math.round(element.pos[1] - Math.round(element.size / 2) - view.pos[1]), element.size, element.size);
+            // }
+
+            if (DEBUG) {
+                ctx.strokeStyle = "red";
+                ctx.beginPath();
+                ctx.arc(element.pos[0] - view.pos[0], element.pos[1] - view.pos[1], 3, 0, Math.PI * 2, true);
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.strokeStyle = "#magenta";
+                ctx.beginPath();
+                ctx.moveTo(element.pos[0] - view.pos[0], element.pos[1] - view.pos[1]);
+                ctx.lineTo(nextPos[0] - view.pos[0], nextPos[1] - view.pos[1]);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+    });
+}
+function drawProjectilesOld(ctx, projectiles, creatures) {
     projectiles.forEach(function (obj) {
         let currentProjectile = obj;
 
@@ -509,7 +575,6 @@ function drawProjectiles(ctx, projectiles, creatures) {
             let cf = (currentProjectile.pos[1] < nextPos[1] ? -1 : 1);
             let angle = rad * cf * 180 / Math.PI;
 
-            
             if (currentProjectile.rotation != undefined && currentProjectile.rotation) {
                 ctx.save();
                 ctx.translate(Math.round(currentProjectile.pos[0] - view.pos[0]), Math.round(currentProjectile.pos[1] - view.pos[1]));
@@ -540,7 +605,67 @@ function drawProjectiles(ctx, projectiles, creatures) {
         }
     });
 }
-function drawCreatures(ctx, creatures) {
+
+function drawCreatures(ctx, elements) {
+    elements.forEach(currentCreature => {
+        let moving = false;
+
+        // Move
+        if (currentCreature.target && (Math.round(currentCreature.pos[0]) != Math.round(currentCreature.target[0]) || Math.round(currentCreature.pos[1]) != Math.round(currentCreature.target[1]))) {
+            if (vLength(vSub(currentCreature.pos, currentCreature.target)) > currentCreature.speed) {
+                let nextPos = getNextPos(currentCreature.pos, vNormal(vSub(currentCreature.pos, currentCreature.target)), currentCreature.speed);
+                currentCreature.pos = nextPos;
+
+                // if (!emotion && player != currentCreature) emotion = [SPRITE_SIZE * 5, SPRITE_SIZE * 12];
+
+                if (DEBUG) {
+                    ctx.strokeStyle = "#00FF00";
+                    ctx.beginPath();
+                    ctx.moveTo(currentCreature.pos[0] - view.pos[0], currentCreature.pos[1] - view.pos[1]);
+                    ctx.lineTo(currentCreature.target[0] - view.pos[0], currentCreature.target[1] - view.pos[1]);
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.strokeStyle = "#00FF00";
+                    ctx.beginPath();
+                    ctx.arc(currentCreature.target[0] - view.pos[0], currentCreature.target[1] - view.pos[1], currentCreature.size / 2, 0, Math.PI * 2, true);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+
+                moving = true;
+            } else {
+                currentCreature.target = undefined;
+            }
+        }
+
+        if (inView(currentCreature.pos, currentCreature.size)) {
+            if (moving) {
+                if (currentCreature.i != undefined) {
+                    currentCreature.i += .1;
+                } else {
+                    currentCreature.i = 0;
+                }
+
+                ctx.save();
+                ctx.translate(Math.round(currentCreature.pos[0] - view.pos[0]), Math.round(currentCreature.pos[1] - view.pos[1] + Math.round(currentCreature.size / 2)));
+                ctx.rotate((Math.cos(currentCreature.i) * 5) * Math.PI / 180);
+                ctx.drawImage(TILESET, currentCreature.sprite[0] * SPRITE_SIZE, currentCreature.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(currentCreature.size / 2) , - Math.round(currentCreature.size), currentCreature.size, currentCreature.size);
+                ctx.restore();
+            } else {
+                ctx.drawImage(TILESET, currentCreature.sprite[0] * SPRITE_SIZE, currentCreature.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(currentCreature.pos[0] - Math.round(currentCreature.size / 2) - view.pos[0]), Math.round(currentCreature.pos[1] - Math.round(currentCreature.size / 2) - view.pos[1]), currentCreature.size, currentCreature.size);
+            }
+
+            if (DEBUG) {
+                ctx.strokeStyle = "lime";
+                ctx.beginPath();
+                ctx.arc(currentCreature.pos[0] - view.pos[0], currentCreature.pos[1] - view.pos[1], CELL_SIZE / 2, 0, Math.PI * 2, true);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+    });
+}
+function drawCreaturesOLD(ctx, creatures) {
     creatures.forEach(function (obj) {
         let currentCreature = obj;
         let emotion = null;
@@ -852,6 +977,7 @@ function drawCreatures(ctx, creatures) {
         }
     });
 }
+
 function drawSplashes(ctx, splashes) {
     splashes.forEach(function (obj) {
         if (obj.life[0] != obj.life[1]) {
@@ -1054,20 +1180,27 @@ function drawEditor(ctx) {
         ctx.drawImage(TILESET, element.sprite[0] * SPRITE_SIZE, element.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, editor.pos[0] + element.pos[0] - (element.size / 2), editor.pos[1] + element.pos[1] - (element.size / 2), element.size, element.size);
     });
 }
-function handleEditor() {
-    let haveSelected = editor.elements.filter((e) => e.selected);
+
+function onClickHandler() {
+    mouse.lastPos = mouse.pos;
+    let viewMousePos = vAdd(mouse.pos, view.pos);
+    let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
+    let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
+
+    let handled = false;
+
+    // Editor
+    let haveSelected = editor.elements.filter(e => e.selected);
     if (haveSelected.length) editor.elements.forEach(element => {
         if (element.selected) {
-            let sameLayerElements = editor.elements.filter((e) => element.layer == e.layer && !e.toggle);
+            let sameLayerElements = editor.elements.filter(e => element.layer == e.layer && !e.toggle);
             if (sameLayerElements.length) sameLayerElements.forEach(e => e.active = false);
-            console.log(element.active);
-            // if (element.active)
             element.active = !element.active;
 
             switch (element.mode) {
                 case "view": {
                     editor.mode = element.mode;
-                    break;   
+                    break;
                 }
                 case "draw": {
                     editor.mode = element.mode;
@@ -1086,20 +1219,58 @@ function handleEditor() {
                     editor.eraserMode = element.active;
                     break;   
                 }
+                case "test": {
+                    editor.mode = element.mode;
+                    break;  
+                }
             }
+
+            handled = true;
         }
-    }); 
-}
+    });
 
-function click() {
-    mouse.lastPos = mouse.pos;
-    let viewMousePos = vAdd(mouse.pos, view.pos);
-    let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
-    let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
+    // Creatures
+    if (!handled) {
+        let creaturesInView = world.creatures.filter(creature => inView(creature.pos, creature.size) && onMouseInView(mouse, creature));
+        if (creaturesInView.length) creaturesInView.forEach(creature => {
+            controller.dragCreature = creature;
+            handled = true;
+        });
+    }
 
-    if (editor.enabled) handleEditor();
+    // Drag map
+    if (!handled) {
+        controller.dragMap = true;
+    }
+    // if (!handled) {
+    //     if (editor.enabled && editor.mode != 'view') {
+    //         // Editor
+    //         let viewMousePosGrid = [Math.floor((viewMousePos[0] + (CELL_SIZE / 2)) / CELL_SIZE) * CELL_SIZE, Math.floor((viewMousePos[1] + (CELL_SIZE / 2)) / CELL_SIZE) * CELL_SIZE];
+            
+    //         switch (editor.mode) {
+    //             case "test": {
+    //                 world.projectiles.push({
+    //                     'pos': viewMousePos,
+    //                     'sprite': [16, 3],
+    //                     'size': CELL_SIZE,
+    //                     'points': [
+    //                         [0,0],
+    //                         [viewMousePos[0] / 2, (viewMousePos[1] > 0 ? 0 : viewMousePos[1]) - CELL_SIZE * 2],
+    //                         viewMousePos
+    //                     ],
+    //                     'speed': .05,
+    //                     'rotation': true
+    //                 });
+    
+    //                 break;
+    //             }
+    //         }
+    //     } else {
+    //         //
+    //     }
+    // }
 }
-function drag() {
+function onDragHandler() {
     mouse.lastPos = mouse.pos;
     let viewMousePos = vAdd(mouse.pos, view.pos);
     let viewMouseStartPos = vAdd(mouse.startPos, view.pos);
@@ -1127,8 +1298,10 @@ function drag() {
         }
     } else {
         // Game && editor view control
-        view.pos = vAdd(view.startPos, viewMousePosDelta);
+        // view.pos = vAdd(view.startPos, viewMousePosDelta);
     }
+    if (controller.dragCreature) controller.dragCreature.target = viewMousePos;
+    if (controller.dragMap) view.pos = vAdd(view.startPos, viewMousePosDelta);
 }
 function onMouse(mouse, obj) {
     return (mouse.pos != null && mouse.pos[0] >= obj.pos[0] - (obj.size / 2) && mouse.pos[0] <= obj.pos[0] + (obj.size / 2) && mouse.pos[1] >= obj.pos[1] - (obj.size / 2) && mouse.pos[1] <= obj.pos[1] + (obj.size / 2));
