@@ -9,9 +9,10 @@ let vNormal = v => {
     let l = vLength(v);
     return [v[0] / l, v[1] / l];
 }
+let getNextPosByBezier = (t, p) => (p.length == 2 ? getNextPosByBezierTwo(t, p) : getNextPosByBezierThree(t, p));
 let getNextPosByBezierTwo = (t, p) => [
-    p[0][0] * Math.pow((1 - t), 2) + p[1][0] *  2 * (1 - t) * t + p[2][0] * Math.pow(t, 2),
-    p[0][1] * Math.pow((1 - t), 2) + p[1][1] *  2 * (1 - t) * t + p[2][1] * Math.pow(t, 2),
+    p[0][0] * (1 - t) + t * p[1][0],
+    p[0][1] * (1 - t) + t * p[1][1]
 ];
 let getNextPosByBezierThree = (t, p) => [
     p[0][0] * Math.pow((1 - t), 2) + p[1][0] *  2 * (1 - t) * t + p[2][0] * Math.pow(t, 2),
