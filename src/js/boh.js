@@ -167,7 +167,7 @@ if (world) {
                 'attackSprite': [17, 5],
                 'attackRotation': true,
                 'faction': 'enemy',
-                'color': 'crimson'
+                'color': '#ff5722'
             },
             {
                 'type': 'creature',
@@ -420,7 +420,10 @@ function drawProjectiles(ctx, projectiles) {
                     ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(projectile.size / 2) , - Math.round(projectile.size / 2), projectile.size, projectile.size);
                     ctx.restore();
                 } else {
+                    ctx.save();
+                    if (projectile.life[0] <= Math.round(projectile.life[1] / 2)) ctx.globalAlpha = projectile.life[0] / Math.round(projectile.life[1] / 2);
                     ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(projectile.pos[0] - Math.round(projectile.size / 2) - view.pos[0]), Math.round(projectile.pos[1] - Math.round(projectile.size / 2) - view.pos[1]), projectile.size, projectile.size);
+                    ctx.restore();
                 }
 
                 if (DEBUG) {
@@ -586,7 +589,7 @@ function drawCreatures(ctx, creatures) {
 
                     case "ranged": {
                         let projectileTargetPos = foe.pos;
-                        if (foe.target && Math.random() >= .5) projectileTargetPos = getNextPos(foe.pos, vNormal(vSub(foe.pos, foe.target)), 90);
+                        if (foe.target && Math.random() >= .5) projectileTargetPos = getNearestPos(foe, getNextPos(foe.pos, vNormal(vSub(foe.pos, foe.target)), 90));
                         world.projectiles.push({
                             'owner': currentCreature,
                             'pos': currentCreature.pos,
