@@ -18,3 +18,13 @@ let getNextPosByBezierThree = (t, p) => [
     p[0][0] * Math.pow((1 - t), 2) + p[1][0] *  2 * (1 - t) * t + p[2][0] * Math.pow(t, 2),
     p[0][1] * Math.pow((1 - t), 2) + p[1][1] *  2 * (1 - t) * t + p[2][1] * Math.pow(t, 2),
 ];
+let back = (x, timeFraction) => Math.pow(timeFraction, 2) * ((x + 1) * timeFraction - x);
+let makeEaseOut = (timing) => (timeFraction) => 1 - timing(1 - timeFraction);
+let bounce = (timeFraction)  => {
+    for (let a = 0, b = 1; 1; a += b, b /= 2) {
+        if (timeFraction >= (7 - 4 * a) / 11) {
+        return -Math.pow((11 - 6 * a - 11 * timeFraction) / 4, 2) + Math.pow(b, 2)
+        }
+    }
+}
+let bounceEaseOut = makeEaseOut(bounce);
