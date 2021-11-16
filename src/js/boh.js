@@ -18,8 +18,6 @@ const COLORS = {
     BAD: "#ff5722"
 }
 
-const SIZE_SCALE_LIMIT = 1000;
-
 const SPRITES = {
     COIN: [15, 7],
     HEART: [16, 7],
@@ -33,15 +31,17 @@ const SPRITES = {
     CRYSTALL_MINE: [5, 7],
     GOLD_MINE: [3, 7],
     HOUSE_01: [3, 3],
+    TOMB_01: [6, 3],
     ROGUE: [1, 5],
     PR_SWORD: [17, 4],
     PR_KNIFE: [17, 3],
+    SIGN_01: [7, 9],
     SIGN_02: [7, 8],
     PEASANT: [2, 9],
     SKELETON: [1, 8]
 }
 
-const DEFAULT_SIGHT = CELL_SIZE * 8;
+const DEFAULT_SIGHT = CELL_SIZE * 5;
 
 let mouse = {
     pos: [0, 0],
@@ -246,7 +246,7 @@ if (world) {
                     'ally',
                     ''
                 ],
-                'color': '#ff5722',
+                'color': '#ff5722', //COLORS.BAD,
                 'onDrop': (thisCreature) => {
                     let goldCount = 300;
                     while (goldCount) {
@@ -658,7 +658,7 @@ if (world) {
             {
                 'type': 'store',
                 'pos': [CELL_SIZE * -2, CELL_SIZE * -5],
-                'sprite': SPRITES.SIGN_02,
+                'sprite': SPRITES.TOMB_01,
                 'spriteToReceive': SPRITES.SKELETON,
                 'spriteToGive': SPRITES.COIN,
                 'countToGive': 499,
@@ -718,7 +718,7 @@ if (world) {
             {
                 'type': 'store',
                 'pos': [CELL_SIZE * -3, CELL_SIZE * -3],
-                'sprite': SPRITES.SIGN_02,
+                'sprite': SPRITES.SIGN_01,
                 'spriteToReceive': SPRITES.COIN,
                 'spriteToGive': SPRITES.CRYSTALL,
                 'countToGive': 1,
@@ -1162,6 +1162,26 @@ function drawCreatures(ctx, creatures) {
             if (currentCreature.startPos == undefined) currentCreature.startPos = currentCreature.pos;
             // AI
             if (currentCreature.faction != world.player.faction && currentCreature.speed) {
+                if (currentCreature.attackDamage) {
+                    let foe = null;
+                    let closestDistance = null;
+                    creatures.forEach(otherCreature => {
+                        if (currentCreature == otherCreature) return;
+                        if (vLength(vSub(currentCreature.pos, otherCreature.pos)) <= DEFAULT_SIGHT && currentCreature.enemyFactions.indexOf(otherCreature.faction) != -1 && isReachable(currentCreature, [otherCreature.pos[0], otherCreature.pos[1]])) {
+                            let currentDistance = vLength(vSub(currentCreature.pos, otherCreature.pos));
+                            if (!foe || currentDistance < closestDistance) {
+                                closestDistance = currentDistance;
+                                foe = otherCreature;
+                            }
+                        }
+                    });
+
+                    if (foe && Math.random() >= .9 && Math.round(vLength(vSub(currentCreature.pos, foe.pos))) > currentCreature.attackRange) {
+                        // console.log(vLength(vSub(currentCreature.pos, foe.pos)), currentCreature.attackRange);
+                        currentCreature.target = getNextPos(foe.pos, vNormal(vSub(foe.pos, currentCreature.pos)), currentCreature.attackRange);
+                    }
+                }
+
                 if (Math.random() <= .01) {
                     let newDir = vNormal(vSub(currentCreature.pos, [currentCreature.pos[0] - 1 + Math.random() * 2, currentCreature.pos[1] - 1 + Math.random() * 2]));
                     let newPos = getNearestPos(currentCreature, getNextPos(currentCreature.startPos, newDir, CELL_SIZE + (CELL_SIZE * Math.random() * 3)));
@@ -1318,7 +1338,7 @@ function drawCreatures(ctx, creatures) {
             // Draw
             if (inView(currentCreature.pos, currentCreature.size)) {
                 let sizeScale = 1;
-                if (currentCreature.sizeScaleLimit) sizeScale = (currentCreature.hp < SIZE_SCALE_LIMIT ?  1 + (currentCreature.hp / SIZE_SCALE_LIMIT) : 2);
+                if (currentCreature.sizeScaleLimit) sizeScale = (currentCreature.hp < currentCreature.sizeScaleLimit ?  1 + (currentCreature.hp / currentCreature.sizeScaleLimit) : 2);
                 let trueSize = currentCreature.size * sizeScale;
                 
                 if (currentCreature.i != undefined && currentCreature.speed) {
