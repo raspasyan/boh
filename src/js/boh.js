@@ -15,30 +15,39 @@ const COLORS = {
     GRAY: "#eceff1",
     BLUE: "#5DE0E2",
     GOOD: "lime",
-    BAD: "#ff5722"
+    BAD: "#ff5722",
+    WHEAT: "wheat"
 }
 
 const SPRITES = {
-    COIN: [15, 7],
-    HEART: [16, 7],
-    SWORD: [15, 8],
-    HELMET: [16, 8],
-    CROWN: [16, 9],
-    MEAT: [17, 7],
-    ORE: [17, 8],
-    ORE_MINE: [4, 6],
-    CRYSTALL: [17, 9],
-    CRYSTALL_MINE: [5, 7],
-    GOLD_MINE: [3, 7],
-    HOUSE_01: [3, 3],
-    TOMB_01: [6, 3],
-    ROGUE: [1, 5],
-    PR_SWORD: [17, 4],
-    PR_KNIFE: [17, 3],
-    SIGN_01: [7, 9],
-    SIGN_02: [7, 8],
-    PEASANT: [2, 9],
-    SKELETON: [1, 8]
+    KEY: [16, 9],
+    BOX: [16, 4],
+    COIN: [16, 7],
+    HEART: [17, 7],
+    SWORD: [16, 8],
+    HELMET: [17, 8],
+    CROWN: [17, 9],
+    MEAT: [18, 7],
+    ORE: [18, 8],
+    CHEST: [6, 5],
+    GOLDEN_CHEST: [7, 5],
+    ORE_MINE: [4, 7],
+    CRYSTALL: [18, 9],
+    CRYSTALL_MINE: [6, 7],
+    GOLD_MINE: [5, 7],
+    HOUSE_01: [12, 9],
+    TOMB_01: [4, 3],
+    ROGUE: [2, 6],
+    PR_SWORD: [17, 5],
+    PR_ARROW: [16, 5],
+    PR_SPEAR: [18, 5],
+    SIGN_01: [4, 4],
+    SIGN_02: [5, 4],
+    PEASANT: [3, 10],
+    SKELETON: [2, 9],
+    ORC: [2, 5],
+    I_SWORD_01: [19, 18],
+    I_ARMOR_01: [18, 17]
 }
 
 const DEFAULT_SIGHT = CELL_SIZE * 5;
@@ -152,7 +161,7 @@ if (world) {
         'player': {
             'faction': 'ally',
             'gold': 0,
-            'ore': 0,
+            'keys': 0,
             'crystalls': 0
         },
         'sprites': [
@@ -185,6 +194,7 @@ if (world) {
                 'attackSprite': SPRITES.PR_SWORD,
                 'attackRotation': true,
                 'faction': 'ally',
+                'king': true,
                 'enemyFactions': [
                     'evil',
                     'orcs',
@@ -210,20 +220,20 @@ if (world) {
                 'attackRange': CELL_SIZE * 1.2,
                 'attackPower': -1,
                 'attackType': 'melee',
-                'attackSprite': SPRITES.PR_KNIFE,
+                'attackSprite': SPRITES.PR_SWORD,
                 'attackRotation': true,
                 'faction': 'evil',
                 'enemyFactions': [
                     'ally',
                     'orcs'
                 ],
-                'color': COLORS.GRAY
+                'color': COLORS.WHEAT
             },
             // Орочий босс
             {
                 'type': 'creature',
                 'pos': [CELL_SIZE * 10, CELL_SIZE * 0],
-                'sprite': [0, 4],
+                'sprite': SPRITES.ORC,
                 'healthSprite': SPRITES.HEART,
                 'size': CELL_SIZE,
                 'sizeScaleLimit': 500,
@@ -231,7 +241,6 @@ if (world) {
                 'speed': 2,
                 'hp': 500,
                 'king': true,
-                'kingAnimation': 0,
                 'attack': [45, 45],
                 'attackRepeat': 0,
                 'attackRepeatMulti': 500,
@@ -239,14 +248,14 @@ if (world) {
                 'attackRange': CELL_SIZE * 7,
                 'attackPower': 5,
                 'attackType': 'ranged',
-                'attackSprite': [17, 5],
+                'attackSprite': SPRITES.PR_SPEAR,
                 'attackRotation': true,
                 'faction': 'orcs',
                 'enemyFactions': [
                     'ally',
                     ''
                 ],
-                'color': '#ff5722', //COLORS.BAD,
+                'color': 'pink', //COLORS.BAD,
                 'onDrop': (thisCreature) => {
                     let goldCount = 300;
                     while (goldCount) {
@@ -323,20 +332,21 @@ if (world) {
                 'attackRotation': false,
                 'faction': 'mine',
                 'enemyFactions': [],
-                'color': '#cddc39',
-                'onHit': (thisCreature) => {
-                    if (Math.random() >= .95) {
-                        let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                'color': COLORS.GRAY,
+                'onHit': (self) => {
+                    if (Math.random() >= .9) {
+                        let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                        let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
                         world.splashes.push({
-                            'pos': thisCreature.pos,
+                            'pos': self.pos,
                             'life': [0, 30],
                             'size': CELL_SIZE / 2,
                             'sprite': SPRITES.COIN,
                             'fadeIn': true,
                             'points': [
-                                thisCreature.pos,
-                                getPosBetween(thisCreature.pos, randomPos),
+                                self.pos,
+                                getPosBetween(self.pos, randomPos),
                                 randomPos,
                             ],
                             'onDrop': () => world.items.push({
@@ -350,7 +360,7 @@ if (world) {
                         });
                     }
                 },
-                'onDrop': () => console.log('dropped')
+                'onDrop': (self) => console.log('dropped')
             },
             // Шахта золота
             {
@@ -374,7 +384,7 @@ if (world) {
                 'attackRotation': false,
                 'faction': 'mine',
                 'enemyFactions': [],
-                'color': '#cddc39',
+                'color': COLORS.GRAY,
                 'onHit': (thisCreature) => {
                     if (Math.random() >= .8) {
                         let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
@@ -425,7 +435,7 @@ if (world) {
                 'attackRotation': false,
                 'faction': 'mine',
                 'enemyFactions': [],
-                'color': '#cddc39',
+                'color': COLORS.GRAY,
                 'onHit': (thisCreature) => {
                     if (Math.random() >= .95) {
                         let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
@@ -531,6 +541,62 @@ if (world) {
                     });
                 }
             },
+            // Сундук
+            {
+                'type': 'creature',
+                'pos': [CELL_SIZE * -1, CELL_SIZE * -1],
+                'sprite': SPRITES.CHEST,
+                'healthSprite': SPRITES.ORE,
+                'size': CELL_SIZE,
+                'sizeScaleLimit': 0,
+                'target': null,
+                'speed': 0,
+                'hp': 10,
+                'attack': [0, 0],
+                'attackRepeat': 0,
+                'attackRepeatMulti': 0,
+                'attackDamage': 0,
+                'attackRange': 0,
+                'attackPower': 0,
+                'attackType': '',
+                'attackSprite': null,
+                'attackRotation': false,
+                'faction': 'mine',
+                'enemyFactions': [],
+                'color': COLORS.GRAY,
+                'onHit': (self) => {
+                },
+                'onDrop': (self) => {
+                    let count = 150;
+                    while (count) {
+                        let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                        let randomPos = getNearestPos(self, getNextPos(self.pos, randomDir, Math.random() * CELL_SIZE));
+
+                        world.splashes.push({
+                            'pos': self.pos,
+                            'life': [0, 30],
+                            'size': CELL_SIZE / 2,
+                            'sprite': SPRITES.COIN,
+                            'fadeIn': true,
+                            'points': [
+                                self.pos,
+                                getPosBetween(self.pos, randomPos),
+                                randomPos,
+                            ],
+                            'onDrop': () => world.items.push({
+                                'type': 'item',
+                                'itemType': 'gold',
+                                'pos': randomPos,
+                                'sprite': SPRITES.COIN,
+                                'size': CELL_SIZE,
+                                'animation': Math.random(),
+                            })
+                        });
+
+                        count--;
+                    }
+                }
+            },
         ],
         'projectiles': [
             // 
@@ -598,6 +664,28 @@ if (world) {
                 'size': CELL_SIZE,
                 'animation': Math.random() * 3,
             },
+            // Меч
+            {
+                'type': 'item',
+                'itemType': 'equip',
+                'equipType': 'weapon',
+                'pos': [CELL_SIZE * 1, CELL_SIZE * 4],
+                'sprite': SPRITES.I_SWORD_01,
+                'size': CELL_SIZE,
+                'animation': Math.random() * 5,
+                'onClick': (self) => {}
+            },
+            // armor
+            {
+                'type': 'item',
+                'itemType': 'equip',
+                'equipType': 'weapon',
+                'pos': [CELL_SIZE * 2, CELL_SIZE * 5],
+                'sprite': SPRITES.I_ARMOR_01,
+                'size': CELL_SIZE,
+                'animation': Math.random() * 10,
+                'onClick': (self) => {}
+            },
         ],
         'stores': [
             // Gold to food
@@ -652,7 +740,7 @@ if (world) {
                         }
                     }
                 },
-                'color': COLORS.GOLD
+                'color': COLORS.GRAY
             },
             // Gold to skeleton
             {
@@ -712,7 +800,7 @@ if (world) {
                         }
                     }
                 },
-                'color': COLORS.GOLD
+                'color': COLORS.GRAY
             },
             // Crystall to gold
             {
@@ -727,9 +815,13 @@ if (world) {
                 'onClick': self => {
                     if (self.restock[0] == self.restock[1]) {
                         if (world.player.crystalls >= self.countToGive) {
+                            world.player.crystalls -= self.countToGive;
+
+                            self.restock[0] = 0;
+
                             let count = 99;
                             while (count) {
-                                let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[0] + (-1 + Math.random() * 2)]));
+                                let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
                                 let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
                                 world.splashes.push({
@@ -755,10 +847,6 @@ if (world) {
                                 
                                 count--;
                             }
-                            
-                            
-                            world.player.crystalls -= self.countToGive;
-                            self.restock[0] = 0;
                         } else {
                             world.splashes.push({
                                 'pos': [self.pos[0], self.pos[1]],
@@ -771,11 +859,69 @@ if (world) {
                         }
                     }
                 },
-                'color': COLORS.GOLD
+                'color': COLORS.GRAY
+            },
+            // golden chest
+            {
+                'type': 'store',
+                'pos': [CELL_SIZE * 0, CELL_SIZE * 3],
+                'sprite': SPRITES.GOLDEN_CHEST,
+                'spriteToReceive': null,
+                'spriteToGive': SPRITES.KEY,
+                'countToGive': 1,
+                'restock': [0, 0],
+                'size': CELL_SIZE,
+                'onClick': self => {
+                    if (self.restock[0] == self.restock[1]) {
+                        if (world.player.keys >= self.countToGive) {
+                            world.player.keys -= self.countToGive;
+
+                            let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                            let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
+
+                            world.splashes.push({
+                                'pos': self.pos,
+                                'life': [0, 30],
+                                'size': CELL_SIZE / 2,
+                                'sprite': SPRITES.KEY,
+                                'fadeIn': true,
+                                'points': [
+                                    self.pos,
+                                    getPosBetween(self.pos, randomPos),
+                                    randomPos,
+                                ],
+                                'onDrop': () => world.items.push({
+                                    'type': 'item',
+                                    'itemType': 'key',
+                                    'pos': randomPos,
+                                    'sprite': SPRITES.KEY,
+                                    'size': CELL_SIZE,
+                                    'animation': Math.random(),
+                                })
+                            });
+
+                            world.splashes.push({
+                                'pos': self.pos,
+                                'life': [0, 15],
+                                'size': CELL_SIZE,
+                                'sprite': self.sprite,
+                                'fadeOut': true,
+                                'points': [
+                                    self.pos,
+                                    [self.pos[0], self.pos[1] - CELL_SIZE / 2]
+                                ]
+                            });
+
+                            dropObj(world.stores, self);
+                        }
+                    }
+                },
+                'color': COLORS.GRAY
             },
         ]
     }
 }
+world.player.king = world.creatures[0];
 
 // Viewer
 let view = {
@@ -988,31 +1134,6 @@ function drawProjectiles(ctx, projectiles) {
                 let count = damage;
                 while (count) {
                     let randomPos = [foe.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, foe.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-
-                    // if (Math.random() >= .8) {
-                    //     world.splashes.push({
-                    //         'pos': foe.pos,
-                    //         'life': [0, 30],
-                    //         'size': CELL_SIZE / 2,
-                    //         'sprite': SPRITES.COIN,
-                    //         'fadeIn': true,
-                    //         'points': [
-                    //             foe.pos,
-                    //             getPosBetween(foe.pos, randomPos),
-                    //             randomPos,
-                    //         ],
-                    //         'onDrop': () => world.items.push({
-                    //             'type': 'item',
-                    //             'itemType': 'gold',
-                    //             'pos': randomPos,
-                    //             'sprite': SPRITES.COIN,
-                    //             'size': CELL_SIZE,
-                    //             'animation': Math.random(),
-                    //         })
-                    //     });
-                    // }
-                    if (foe.onHit != undefined) foe.onHit(foe);
-
                     world.splashes.push({
                         'pos': foe.pos,
                         'life': [0, 30],
@@ -1025,6 +1146,9 @@ function drawProjectiles(ctx, projectiles) {
                             randomPos,
                         ]
                     });
+
+                    if (foe.onHit != undefined) foe.onHit(foe);
+                    
                     count--;
                 }
             })
@@ -1066,39 +1190,43 @@ function drawItems(ctx, items) {
                 }
                 case "weapon": {
                     allyCreature.attackDamage += 1;
-
-                    world.splashes.push({
-                        'pos': item.pos,
-                        'life': [0, 60],
-                        'size': CELL_SIZE,
-                        'sprite': SPRITES.SWORD,
-                        'fadeIn': true,
-                        'points': [
-                            [allyCreature.pos[0], allyCreature.pos[1] - CELL_SIZE],
-                            allyCreature.pos
-                        ]
-                    });
-
                     break;
                 }
                 case "crystall": {
                     world.player.crystalls += 1;
                     break;
                 }
+                case "key": {
+                    world.player.keys += 1;
+                    break;
+                }
                 case "food": {
                     allyCreature.hp += 1;
+                    break;
+                }
+                case "equip": {
+                    if (allyCreature.equip) {
+                        let randomDir = vNormal(vSub(allyCreature.pos, [allyCreature.pos[0] + (-1 + Math.random() * 2), allyCreature.pos[1] + (-1 + Math.random() * 2)]));
+                        let randomPos = getNearestPos(allyCreature, getNextPos(allyCreature.pos, randomDir, Math.round(CELL_SIZE * 1.1)));
 
-                    world.splashes.push({
-                        'pos': item.pos,
-                        'life': [0, 60],
-                        'size': CELL_SIZE,
-                        'sprite': SPRITES.HELMET,
-                        'fadeIn': true,
-                        'points': [
-                            [allyCreature.pos[0], allyCreature.pos[1] - CELL_SIZE],
-                            allyCreature.pos
-                        ]
-                    });
+                        let itemClone = Object.assign({}, allyCreature.equip, {'pos': randomPos});
+
+                        world.splashes.push({
+                            'pos': allyCreature.pos,
+                            'life': [0, 30],
+                            'size': CELL_SIZE / 2,
+                            'sprite': itemClone.sprite,
+                            'fadeIn': true,
+                            'points': [
+                                allyCreature.pos,
+                                getPosBetween(allyCreature.pos, randomPos),
+                                randomPos,
+                            ],
+                            'onDrop': () => world.items.push(itemClone)
+                        });
+                    }
+                    
+                    allyCreature.equip = item;
 
                     break;
                 }
@@ -1114,25 +1242,42 @@ function drawStores(ctx, stores) {
         if (store.restock[0] < store.restock[1]) store.restock[0]++;
 
         if (inView(store.pos, store.size)) {
+            let selected = false;
             ctx.drawImage(TILESET, store.sprite[0] * SPRITE_SIZE, store.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
                 Math.round(store.pos[0] - Math.round(store.size / 2) - view.pos[0]),
                 Math.round(store.pos[1] - Math.round(store.size / 2) - view.pos[1]),
                 store.size, store.size
             );
 
+            if (onMouseInView(store)) {
+                if (store.boxAnimation == undefined) store.boxAnimation = 0;
+                store.boxAnimation += .1;
+                selected = true;
+            }
+
+            if (selected) {
+                ctx.drawImage(TILESET, SPRITES.BOX[0] * SPRITE_SIZE, SPRITES.BOX[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
+                    Math.round(store.pos[0] - (store.size / 2) - Math.cos(store.boxAnimation) * 2 - view.pos[0]),
+                    Math.round(store.pos[1] - (store.size / 2) - Math.cos(store.boxAnimation) * 2 - view.pos[1]),
+                    store.size + Math.cos(store.boxAnimation) * 4, store.size + Math.cos(store.boxAnimation) * 4
+                );
+            }
+
             ctx.shadowOffsetX = 1;
             ctx.shadowOffsetY = 1;
             ctx.shadowColor = "black";
 
-            if (store.spriteToReceiveAnimation == undefined) store.spriteToReceiveAnimation = 0;
-            store.spriteToReceiveAnimation += .1; 
-            ctx.drawImage(TILESET, store.spriteToReceive[0] * SPRITE_SIZE, store.spriteToReceive[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                Math.round(store.pos[0] - (CELL_SIZE * (store.restock[0] / store.restock[1]) / 2) - view.pos[0]  - Math.cos(store.spriteToReceiveAnimation) * 4),
-                Math.round(store.pos[1] - (CELL_SIZE * (store.restock[0] / store.restock[1]) / 2) - view.pos[1] - Math.sin(store.spriteToReceiveAnimation) * 2),
-                CELL_SIZE * (store.restock[0] / store.restock[1]), CELL_SIZE * (store.restock[0] / store.restock[1])
-            );
+            if (store.spriteToReceive) {
+                if (store.spriteToReceiveAnimation == undefined) store.spriteToReceiveAnimation = Math.random() * 5;
+                store.spriteToReceiveAnimation += .1; 
+                ctx.drawImage(TILESET, store.spriteToReceive[0] * SPRITE_SIZE, store.spriteToReceive[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
+                    Math.round(store.pos[0] - (CELL_SIZE * (store.restock[0] / store.restock[1]) / 2) - view.pos[0]  - Math.cos(store.spriteToReceiveAnimation) * 4),
+                    Math.round(store.pos[1] - (CELL_SIZE * (store.restock[0] / store.restock[1]) / 2) - view.pos[1] - Math.sin(store.spriteToReceiveAnimation) * 2),
+                    CELL_SIZE * (store.restock[0] / store.restock[1]), CELL_SIZE * (store.restock[0] / store.restock[1])
+                );
+            }
 
-            if (store.restock[0] == store.restock[1]) {
+            if (store.restock[0] == store.restock[1] && selected) {
                 ctx.font = SM_FONT;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
@@ -1177,7 +1322,6 @@ function drawCreatures(ctx, creatures) {
                     });
 
                     if (foe && Math.random() >= .9 && Math.round(vLength(vSub(currentCreature.pos, foe.pos))) > currentCreature.attackRange) {
-                        // console.log(vLength(vSub(currentCreature.pos, foe.pos)), currentCreature.attackRange);
                         currentCreature.target = getNextPos(foe.pos, vNormal(vSub(foe.pos, currentCreature.pos)), currentCreature.attackRange);
                     }
                 }
@@ -1229,7 +1373,7 @@ function drawCreatures(ctx, creatures) {
 
             // Collide
             let col = false;
-            let obstacles = [].concat(creatures, world.blocks);
+            let obstacles = [].concat(creatures, world.blocks, world.stores);
             obstacles.forEach(function (obstacle) {
                 if (currentCreature == obstacle) return;
                 let distanceBetween = vLength(vSub(currentCreature.pos, obstacle.pos));
@@ -1241,13 +1385,9 @@ function drawCreatures(ctx, creatures) {
                     if (obstacle.type == "creature") {
                         newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.ceil((closestDistance - distanceBetween)) / (obstacle.speed ? 2 : 1));
                         currentCreature.pos = newPos;
-                    } else if (obstacle.type == "block" || obstacle.type == "item" && obstacle.solid) {
+                    } else if (obstacle.type == "block" || obstacle.type == "store" || obstacle.type == "item" && obstacle.solid) {
                         newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.round((closestDistance - distanceBetween)));
                         currentCreature.pos = newPos;
-                    // } else if (obstacle.type == "trap") {
-                    //     currentCreature.target = undefined;
-                    //     currentCreature.sp = vMultScalar(dir, obstacle.speed);
-                    //     console.log("HIT", currentCreature.target);
                     }
 
                     if (DEBUG) {
@@ -1337,20 +1477,31 @@ function drawCreatures(ctx, creatures) {
 
             // Draw
             if (inView(currentCreature.pos, currentCreature.size)) {
+                let selected = false;
                 let sizeScale = 1;
                 if (currentCreature.sizeScaleLimit) sizeScale = (currentCreature.hp < currentCreature.sizeScaleLimit ?  1 + (currentCreature.hp / currentCreature.sizeScaleLimit) : 2);
                 let trueSize = currentCreature.size * sizeScale;
+
+                if (onMouseInView(currentCreature)) {
+                    if (currentCreature.boxAnimation == undefined) currentCreature.boxAnimation = 0;
+                    currentCreature.boxAnimation += .1;
+                    selected = true;
+                }
                 
-                if (currentCreature.i != undefined && currentCreature.speed) {
-                    currentCreature.i += .1;
+                if (currentCreature.speed) {
+                    if (currentCreature.moveAnimation == undefined) {
+                        currentCreature.moveAnimation = Math.random() * 5;
+                    } else {
+                        currentCreature.moveAnimation += .1;
+                    }
                 } else {
-                    currentCreature.i = 0;
+                    currentCreature.moveAnimation = 0;
                 }
 
                 if (moving) {
                     ctx.save();
                     ctx.translate(Math.round(currentCreature.pos[0] - view.pos[0]), Math.round(currentCreature.pos[1] - view.pos[1] + Math.round(trueSize / 2)));
-                    ctx.rotate((Math.cos(currentCreature.i) * 5) * Math.PI / 180);
+                    ctx.rotate((Math.cos(currentCreature.moveAnimation) * 5) * Math.PI / 180);
                     ctx.drawImage(TILESET, currentCreature.sprite[0] * SPRITE_SIZE, currentCreature.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
                         - Math.round(trueSize / 2),
                         - Math.round(trueSize),
@@ -1360,20 +1511,28 @@ function drawCreatures(ctx, creatures) {
                 } else {
                     ctx.drawImage(TILESET, currentCreature.sprite[0] * SPRITE_SIZE, currentCreature.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
                         Math.round(currentCreature.pos[0] - (trueSize / 2) - view.pos[0]),
-                        Math.round(currentCreature.pos[1] - (trueSize / 2) - Math.cos(currentCreature.i) - view.pos[1]),
-                        trueSize, trueSize + Math.cos(currentCreature.i)
+                        Math.round(currentCreature.pos[1] - (trueSize / 2) - Math.cos(currentCreature.moveAnimation) - view.pos[1]),
+                        trueSize, trueSize + Math.cos(currentCreature.moveAnimation)
+                    );
+                }
+
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                ctx.shadowColor = "black";
+
+                ctx.font = SM_FONT;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                if (selected) {
+                    ctx.drawImage(TILESET, SPRITES.BOX[0] * SPRITE_SIZE, SPRITES.BOX[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
+                        Math.round(currentCreature.pos[0] - (trueSize / 2) - Math.cos(currentCreature.boxAnimation) * 2 - view.pos[0]),
+                        Math.round(currentCreature.pos[1] - (trueSize / 2) - Math.cos(currentCreature.boxAnimation) * 2 - view.pos[1]),
+                        trueSize + Math.cos(currentCreature.boxAnimation) * 4, trueSize + Math.cos(currentCreature.boxAnimation) * 4
                     );
                 }
 
                 if (currentCreature.hp != undefined) {
-                    ctx.font = SM_FONT;
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    ctx.shadowColor = "black";
-
                     ctx.drawImage(TILESET, currentCreature.healthSprite[0] * SPRITE_SIZE, currentCreature.healthSprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
                         Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .75 / 2) - view.pos[0]),
                         Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 3) - view.pos[1]),
@@ -1384,33 +1543,39 @@ function drawCreatures(ctx, creatures) {
                         currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
                         currentCreature.pos[1] + Math.round(CELL_SIZE * .75) - view.pos[1]
                     );
-
-                    if (currentCreature.attackDamage) {
-                        ctx.drawImage(TILESET, SPRITES.SWORD[0] * SPRITE_SIZE, SPRITES.SWORD[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                            Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .75 / 2) - view.pos[0]),
-                            Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 3) + Math.round(CELL_SIZE / 2) - view.pos[1]),
-                            CELL_SIZE * .75 ,CELL_SIZE * .75
-                        );
-                        ctx.fillStyle = COLORS.GRAY;
-                        ctx.fillText((currentCreature.hp <= currentCreature.attackRepeatMulti ? currentCreature.attackDamage : currentCreature.attackDamage + '*' + Math.ceil(currentCreature.hp / currentCreature.attackRepeatMulti)),
-                            currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
-                            currentCreature.pos[1] + Math.round(CELL_SIZE * .75) + Math.round(CELL_SIZE / 2) - view.pos[1]
-                        );
-                    }
-
-                    if (currentCreature.king != undefined && currentCreature.king) {
-                        currentCreature.kingAnimation += .1;
-                        ctx.drawImage(TILESET, SPRITES.CROWN[0] * SPRITE_SIZE, SPRITES.CROWN[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                            Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 2) - view.pos[0]  - Math.cos(currentCreature.kingAnimation) * 2),
-                            Math.round(currentCreature.pos[1] - Math.round(CELL_SIZE * 1.5) - view.pos[1] - Math.sin(currentCreature.kingAnimation) * 2),
-                            CELL_SIZE ,CELL_SIZE
-                        );
-                    }
-
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 0;
-                    ctx.shadowColor = "";
                 }
+
+                if (selected && currentCreature.attackDamage) {
+                    ctx.drawImage(TILESET, SPRITES.SWORD[0] * SPRITE_SIZE, SPRITES.SWORD[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
+                        Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .75 / 2) - view.pos[0]),
+                        Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 3) + Math.round(CELL_SIZE / 2) - view.pos[1]),
+                        CELL_SIZE * .75 ,CELL_SIZE * .75
+                    );
+                    ctx.fillStyle = COLORS.GRAY;
+                    ctx.fillText((currentCreature.hp <= currentCreature.attackRepeatMulti ? currentCreature.attackDamage : currentCreature.attackDamage + '*' + Math.ceil(currentCreature.hp / currentCreature.attackRepeatMulti)),
+                        currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
+                        currentCreature.pos[1] + Math.round(CELL_SIZE * .75) + Math.round(CELL_SIZE / 2) - view.pos[1]
+                    );
+                }
+
+                if (currentCreature.king != undefined && currentCreature.king) {
+                    if (currentCreature.kingAnimation == undefined) currentCreature.kingAnimation = Math.random() * 10;
+                    currentCreature.kingAnimation += .1;
+
+                    ctx.drawImage(TILESET, SPRITES.CROWN[0] * SPRITE_SIZE, SPRITES.CROWN[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
+                        Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 2) - view.pos[0]  - Math.cos(currentCreature.kingAnimation) * 2),
+                        Math.round(currentCreature.pos[1] - Math.round(CELL_SIZE * 1.5) - view.pos[1] - Math.sin(currentCreature.kingAnimation) * 2),
+                        CELL_SIZE ,CELL_SIZE
+                    );
+
+                    if (selected) {
+                        //
+                    }
+                }
+
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.shadowColor = "";
 
                 if (DEBUG) {
                     ctx.strokeStyle = (col ? "gold" : "lime");
@@ -1427,315 +1592,6 @@ function drawCreatures(ctx, creatures) {
         }
     });
 }
-// function drawCreaturesOLD(ctx, creatures) {
-//     creatures.forEach(function (obj) {
-//         let currentCreature = obj;
-//         let emotion = null;
-//         let moving = false;
-
-//         // Dead
-//         if (currentCreature.hp[0] <= 0) {
-//             // currentCreature.hp[0] = 0;
-//             // if (currentCreature.respawn) {
-//             //     currentCreature.type = "sprite";    
-//             // } else {
-//             //     dropObj(objects, currentCreature);
-//             // }
-
-//             dropObj(objects, currentCreature);
-
-//             // Drop item
-//             // if (Math.random() <= .4) {
-//             //     objects.push({
-//             //         type: "item",
-//             //         pos: [currentCreature.pos[0], currentCreature.pos[1]],
-//             //         sprite: [(5 * SPRITE_SIZE), (11 * SPRITE_SIZE)],
-//             //         size: CELL_SIZE
-//             //     });
-//             // }
-
-//             return;
-//         } else if (currentCreature.hp[0] < currentCreature.hp[1]) {
-//             if (currentCreature.regen[0] == currentCreature.regen[1]) {
-//                 currentCreature.regen[0] = 0;
-//                 currentCreature.hp[0] += 1;
-
-//                 // objects.push({
-//                 //     type: "splash",
-//                 //     pos: [currentCreature.pos[0], currentCreature.pos[1]],
-//                 //     size: CELL_SIZE,
-//                 //     sprite: [SPRITE_SIZE * 16, SPRITE_SIZE * 7],
-//                 //     text: "+" + 1,
-//                 //     color: "lime",
-//                 //     life: [0, 45]
-//                 // });
-//             } else {
-//                 currentCreature.regen[0]++;
-//             }
-//         } else if (currentCreature.hp[0] > currentCreature.hp[1]) currentCreature.hp[0] = currentCreature.hp[1];
-
-//         // AI
-//         if (AI && currentCreature != player) {
-//             let closestTarget = null;
-//             if (currentCreature.dmg) {
-//                 let closestTargetDistance = null;
-//                 creatures.forEach(function (obj) {
-//                     if (currentCreature == obj) return;
-//                     let currentTarget = obj;
-
-//                     if (vLength(vSub(currentCreature.pos, currentTarget.pos)) <= currentCreature.sight && currentCreature.faction != currentTarget.faction && isReachable(currentCreature.pos, obj.pos)) {
-//                         let currentDistance = vLength(vSub(currentCreature.pos, currentTarget.pos));
-//                         if (!closestTarget || currentDistance < closestTargetDistance) {
-//                             closestTargetDistance = currentDistance;
-//                             closestTarget = currentTarget;
-//                         }
-//                     }
-//                 });
-//             }
-//             if (closestTarget) {
-//                 if (currentCreature.hp[0] > Math.ceil(currentCreature.hp[1] / 5)) {
-//                     if (vLength(vSub(currentCreature.pos, closestTarget.pos)) > currentCreature.attackRange + (CELL_SIZE / 4)) {
-//                         // Pursuit
-//                         let closestPosToAttack = getNextPos(closestTarget.pos, vNormal(vSub(closestTarget.pos, currentCreature.pos)), currentCreature.attackRange);
-//                         currentCreature.target = closestPosToAttack;
-
-//                         // Emotion
-//                         emotion = [SPRITE_SIZE * 18, SPRITE_SIZE * 1];
-//                     } else {
-//                         // Evasion
-//                         if (Math.random() <= .05) {
-//                             let newDir = vNormal(vSub(currentCreature.pos, [currentCreature.pos[0] - 1 + Math.random() * 2, currentCreature.pos[1] - 1 + Math.random() * 3]));
-//                             let newPos = getReachablePos(currentCreature.pos, getNextPos(currentCreature.pos, newDir, CELL_SIZE + (CELL_SIZE * Math.random() * 1)));
-//                             if (vLength(vSub(newPos, closestTarget.pos)) <= currentCreature.attackRange + (CELL_SIZE / 4)) currentCreature.target = newPos;
-//                         }
-
-//                         // Emotion
-//                         emotion = [SPRITE_SIZE * 16, SPRITE_SIZE * 0];
-//                     }
-//                 } else {
-//                     // Try to escape
-//                     let posToEscape = getReachablePos(currentCreature.pos, getNextPos(closestTarget.pos, vNormal(vSub(closestTarget.pos, currentCreature.pos)), closestTarget.sight + 1));
-                    
-//                     currentCreature.target = posToEscape;
-
-//                     // Emotion
-//                     emotion = [SPRITE_SIZE * 17, SPRITE_SIZE * 0];
-//                 }
-//             } else {
-//                 // AI
-//                 if (currentCreature.ai) {
-//                     // console.log("think");
-//                     // Follower
-//                     if (currentCreature.ai == "follower" && player && (vLength(vSub(currentCreature.pos, player.pos)) <= currentCreature.sight && vLength(vSub(currentCreature.pos, player.pos)) > CELL_SIZE * 1.5) && isReachable(currentCreature.pos, player.pos)) {
-//                         currentCreature.target = getNextPos(player.pos, vNormal(vSub(player.pos, currentCreature.pos)), CELL_SIZE * 1.5);
-//                     } else if (currentCreature.ai == "worker" && player && !currentCreature.target) {
-//                         // Worker
-//                         let items = objects.filter(function(obj) { return obj.type == "item" && !obj.itemType;});
-//                         let closestItem = null;
-//                         let closestItemDistance = null;
-//                         console.log("search");
-//                         items.forEach(function (obj) {
-//                             if (currentCreature == obj) return;
-//                             let currentItem = obj;
-
-//                             if (vLength(vSub(currentCreature.pos, currentItem.pos)) <= currentCreature.sight && isReachable(currentCreature.pos, currentItem.pos)) {
-//                                 let currentDistance = vLength(vSub(currentCreature.pos, currentItem.pos));
-//                                 if (!closestItem || currentDistance < closestItemDistance) {
-//                                     closestItemDistance = currentDistance;
-//                                     closestItem = currentItem;
-//                                 }
-//                             }
-//                         });
-//                         if (closestItem) {
-//                             console.log("found");
-//                             if (vLength(vSub(currentCreature.pos, closestItem.pos)) <= CELL_SIZE * 2) {
-//                                 console.log("gather");
-//                                 // currentCreature.target = undefined;
-//                                 // closestItem.use[0]++; 
-//                             } else {
-//                                 console.log("go to");
-//                                 currentCreature.target = getNextPos(closestItem.pos, vNormal(vSub(closestItem.pos, currentCreature.pos)), CELL_SIZE / 2);
-//                             }
-//                             // console.log(closestItem);
-//                             // currentCreature.target = closestItem.pos;
-//                             // currentCreature.target = getNextPos(currentCreature.pos, vNormal(vSub(currentCreature.pos, closestItem.pos)), currentCreature.speed);
-//                         } else if ((vLength(vSub(currentCreature.pos, player.pos)) <= currentCreature.sight && vLength(vSub(currentCreature.pos, player.pos)) > CELL_SIZE * 1.5) && isReachable(currentCreature.pos, player.pos)) {
-//                             console.log(2);
-//                             currentCreature.target = getNextPos(player.pos, vNormal(vSub(player.pos, currentCreature.pos)), CELL_SIZE * 1.5);
-//                         }
-//                     }
-//                 } else {
-//                     if (Math.random() <= .01) {
-//                         let newDir = vNormal(vSub(currentCreature.pos, [currentCreature.pos[0] - 1 + Math.random() * 2, currentCreature.pos[1] - 1 + Math.random() * 2]));
-//                         let newPos = getReachablePos(currentCreature.pos, getNextPos(currentCreature.pos, newDir, CELL_SIZE + (CELL_SIZE * Math.random() * 3)));
-//                         currentCreature.target = newPos;
-//                     }
-//                 }
-//                 // ..
-//                 // AI - Guard
-//                 // ..
-//                 // AI - Hunter
-//             }
-//         }
-
-//         // Move
-//         if (currentCreature.target && (Math.round(currentCreature.pos[0]) != Math.round(currentCreature.target[0]) || Math.round(currentCreature.pos[1]) != Math.round(currentCreature.target[1]))) {
-//             if (vLength(vSub(currentCreature.pos, currentCreature.target)) > currentCreature.speed) {
-//                 let nextPos = getNextPos(currentCreature.pos, vNormal(vSub(currentCreature.pos, currentCreature.target)), currentCreature.speed);
-//                 currentCreature.pos = nextPos;
-
-//                 if (DEBUG) {
-//                     ctx.strokeStyle = "#00FF00";
-//                     ctx.beginPath();
-//                     ctx.moveTo(currentCreature.pos[0] - view.pos[0], currentCreature.pos[1] - view.pos[1]);
-//                     ctx.lineTo(currentCreature.target[0] - view.pos[0], currentCreature.target[1] - view.pos[1]);
-//                     ctx.closePath();
-//                     ctx.stroke();
-//                     ctx.strokeStyle = "#00FF00";
-//                     ctx.beginPath();
-//                     ctx.arc(currentCreature.target[0] - view.pos[0], currentCreature.target[1] - view.pos[1], currentCreature.size / 2, 0, Math.PI * 2, true);
-//                     ctx.closePath();
-//                     ctx.stroke();
-//                 }
-
-//                 moving = true;
-//             } else {
-//                 currentCreature.target = undefined;
-//             }
-//         }
-
-//         // Speed
-//         if (currentCreature.sp && (currentCreature.sp[0] != 0 || currentCreature.sp[1] != 0)) {
-//             currentCreature.pos = vAdd(currentCreature.pos, currentCreature.sp);
-            
-//             currentCreature.sp = vMultScalar(currentCreature.sp, .9);
-//             if (Math.abs(currentCreature.sp[0]) <= .05) currentCreature.sp[0] = 0;
-//             if (Math.abs(currentCreature.sp[1]) <= .05) currentCreature.sp[1] = 0;
-//         }
-
-//         // Calc collisions
-//         let col = false;
-//         obstacles = objects.filter(function (obj) {
-//             return obj.type == "creature" || obj.type == "block" || obj.type == "trap" || obj.type == "item" && obj.solid;
-//         });
-//         obstacles.forEach(function (obj2) {
-//             if (currentCreature == obj2) return;
-//             let distanceBetween = vLength(vSub(currentCreature.pos, obj2.pos));
-//             let closestDistance = (currentCreature.size + obj2.size) / 2;
-//             if (distanceBetween < closestDistance) {
-//                 col = true;
-//                 let dir = vNormal(vSub(currentCreature.pos, obj2.pos));
-//                 let newPos = [];
-//                 if (obj2.type == "creature") {
-//                     newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.ceil((closestDistance - distanceBetween)) / 2);
-//                     currentCreature.pos = newPos;
-//                 } else if (obj2.type == "block" || obj2.type == "item" && obj2.solid) {
-//                     newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.round((closestDistance - distanceBetween)));
-//                     currentCreature.pos = newPos;
-//                 } else if (obj2.type == "trap") {
-//                     currentCreature.target = undefined;
-//                     currentCreature.sp = vMultScalar(dir, obj2.speed);
-//                 }
-
-//                 if (DEBUG) {
-//                     ctx.strokeStyle = "#FFFFFF";
-//                     ctx.beginPath();
-//                     ctx.moveTo(obj.pos[0] - view.pos[0], obj.pos[1] - view.pos[1]);
-//                     ctx.lineTo(newPos[0] - view.pos[0], newPos[1] - view.pos[1]);
-//                     ctx.closePath();
-//                     ctx.stroke();
-
-//                     ctx.beginPath();
-//                     ctx.arc(newPos[0] - view.pos[0], newPos[1] - view.pos[1], 5, 0, Math.PI * 2, true);
-//                     ctx.closePath();
-//                     ctx.stroke();
-//                 }
-//             }
-//         });
-//         if (DEBUG) {
-//             if (col) {
-//                 ctx.strokeStyle = "blue";
-//             } else {
-//                 ctx.strokeStyle = "white";
-//             }
-//             ctx.beginPath();
-//             ctx.arc(currentCreature.pos[0] - view.pos[0], currentCreature.pos[1] - view.pos[1], currentCreature.size / 2, 0, Math.PI * 2, true);
-//             ctx.closePath();
-//             ctx.stroke();
-//         }
-
-//         // Prepare to attack
-//         if (currentCreature.dmg && currentCreature.attack[0] < currentCreature.attack[1]) currentCreature.attack[0]++;
-
-//         // Attack nearest foes
-//         if (currentCreature.dmg && AI) {
-//             let foe = null;
-//             let closestDistance = null;
-//             creatures.forEach(function (obj) {
-//                 if (currentCreature == obj) return;
-
-//                 if (vLength(vSub(currentCreature.pos, obj.pos)) <= currentCreature.attackRange + (CELL_SIZE / 4) && currentCreature.faction != obj.faction && isReachable(currentCreature, obj.pos)) {
-//                     let currentDistance = vLength(vSub(currentCreature.pos, obj.pos));
-//                     if (!foe || currentDistance < closestDistance) {
-//                         closestDistance = currentDistance;
-//                         foe = obj;
-//                     }
-//                 }
-//             });
-//             if (foe && vLength(vSub(currentCreature.pos, foe.pos)) <= currentCreature.attackRange + (CELL_SIZE / 4) && currentCreature.attack[0] == currentCreature.attack[1]) {
-//                 currentCreature.attack[0] = 0;
-//                 objects.push({
-//                     type: "projectile",
-//                     faction: currentCreature.faction,
-//                     owner: currentCreature,
-//                     pos: getNextPos(currentCreature.pos, vNormal(vSub(currentCreature.pos, foe.pos)), CELL_SIZE / 4),
-//                     dir: vNormal(vSub(currentCreature.pos, foe.pos)),
-//                     rotation: currentCreature.attackSpriteRotation,
-//                     sprite: currentCreature.attackSprite,
-//                     speed: currentCreature.attackSpeed,
-//                     dmg: currentCreature.dmg,
-//                     power: (currentCreature.attackPower ? currentCreature.attackPower : 0),
-//                     life: [0, Math.ceil(currentCreature.attackRange / 4)],
-//                     size: CELL_SIZE / 1
-//                 });
-//             }
-//         }
-
-//         // Drawing
-//         if (inView(currentCreature.pos, currentCreature.size)) {
-//             // Draw health
-//             if (currentCreature.hp[0] < currentCreature.hp[1]) {
-//                 ctx.fillStyle = "red";
-//                 ctx.fillRect(Math.round(obj.pos[0] - Math.round(obj.size / 2) - view.pos[0]), Math.round(obj.pos[1] + Math.round(obj.size / 2) + 2 - view.pos[1]), obj.size, 4);
-//                 ctx.fillStyle = "gold";
-//                 ctx.fillRect(Math.round(obj.pos[0] - Math.round(obj.size / 2) - view.pos[0]), Math.round(obj.pos[1] + Math.round(obj.size / 2) + 2 - view.pos[1]), Math.ceil(obj.size * (obj.hp[0] / obj.hp[1])), 4);
-//             }
-
-//             // Draw sprite
-//             if (moving) {
-//                 if (obj.i != undefined) {
-//                     obj.i += .1;
-//                 } else {
-//                     obj.i = 0;
-//                 }
-
-//                 ctx.save();
-//                 ctx.translate(Math.round(obj.pos[0] - view.pos[0]), Math.round(obj.pos[1] - view.pos[1] + Math.round(obj.size / 2)));
-//                 ctx.rotate((Math.cos(obj.i) * 5) * Math.PI / 180);
-//                 ctx.drawImage(TILESET, currentCreature.sprite[0], currentCreature.sprite[1], SPRITE_SIZE, SPRITE_SIZE, - Math.round(obj.size / 2) , - Math.round(obj.size), obj.size, obj.size);
-//                 ctx.restore();
-//             } else {
-//                 ctx.drawImage(TILESET, currentCreature.sprite[0], currentCreature.sprite[1], SPRITE_SIZE, SPRITE_SIZE, Math.round(obj.pos[0] - Math.round(obj.size / 2) - view.pos[0]), Math.round(obj.pos[1] - Math.round(obj.size / 2) - view.pos[1]), obj.size, obj.size);
-//             }
-            
-//             // Draw emotion
-//             if (emotion) ctx.drawImage(TILESET, emotion[0], emotion[1], SPRITE_SIZE, SPRITE_SIZE, Math.round(obj.pos[0] - Math.round(obj.size / 2) - view.pos[0]), Math.round(obj.pos[1] - Math.round(obj.size * 1.8) - view.pos[1]), obj.size, obj.size);
-            
-//             // Draw krown
-//             // if (currentCreature.king) ctx.drawImage(TILESET, 44 * SPRITE_SIZE, 2 * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, currentCreature.pos[0] - Math.round(CELL_SIZE / 4) - view.pos[0], currentCreature.pos[1] - (currentCreature.size / 2) - 16 - view.pos[1], CELL_SIZE / 2, CELL_SIZE / 2);
-//         }
-//     });
-// }
 
 function drawSplashes(ctx, splashes) {
     splashes.forEach(function (splash) {
@@ -1788,7 +1644,7 @@ function drawSplashes(ctx, splashes) {
 // EDITOR
 function drawEditor(ctx) {
     editor.elements.forEach(element => {
-        element.selected = onMouse(mouse, element);
+        element.selected = onMouse(element);
 
         ctx.fillStyle = (element.selected ? 'GOLD' : "VIOLET");
         ctx.fillRect(editor.pos[0] + element.pos[0] - (element.size / 2), editor.pos[1] + element.pos[1] - (element.size / 2), element.size, element.size);
@@ -1801,8 +1657,10 @@ function drawEditor(ctx) {
 }
 
 function drawUI(ctx) {
+    if (!controller.dragMap) view.pos = [world.player.king.pos[0] - (view.width / 2), world.player.king.pos[1] - (view.height / 2)];
+
     ctx.font = MD_FONT;
-    ctx.textAlign = "center";
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
     ctx.shadowOffsetX = 1;
@@ -1815,23 +1673,12 @@ function drawUI(ctx) {
             CELL_SIZE - Math.round(CELL_SIZE / 2),
             CELL_SIZE, CELL_SIZE
         );
-        ctx.fillStyle = COLORS.GOLD;
+        ctx.fillStyle = 'wheat';
         ctx.fillText(world.player.gold,
             CELL_SIZE * 2,
             CELL_SIZE
         );
     }
-
-    // ctx.drawImage(TILESET, SPRITES.ORE[0] * SPRITE_SIZE, SPRITES.ORE[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-    //     CELL_SIZE - Math.round(CELL_SIZE / 2),
-    //     (CELL_SIZE * 2) - Math.round(CELL_SIZE / 2),
-    //     CELL_SIZE, CELL_SIZE
-    // );
-    // ctx.fillStyle = COLORS.GRAY;
-    // ctx.fillText(world.player.ore,
-    //     CELL_SIZE * 2,
-    //     CELL_SIZE * 2
-    // );
 
     if (world.player.crystalls) {
         ctx.drawImage(TILESET, SPRITES.CRYSTALL[0] * SPRITE_SIZE, SPRITES.CRYSTALL[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
@@ -1846,16 +1693,18 @@ function drawUI(ctx) {
         );
     }
 
-    // ctx.drawImage(TILESET, SPRITES.SWORD[0] * SPRITE_SIZE, SPRITES.SWORD[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-    //     Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .75 / 2) - view.pos[0]),
-    //     Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 3) + Math.round(CELL_SIZE / 2) - view.pos[1]),
-    //     CELL_SIZE * .75 ,CELL_SIZE * .75
-    // );
-    // ctx.fillStyle = COLORS.BAD;
-    // ctx.fillText('~' + currentCreature.attackDamage * Math.ceil(currentCreature.hp / currentCreature.attackRepeatMulti),
-    //     currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
-    //     currentCreature.pos[1] + Math.round(CELL_SIZE * .75) + Math.round(CELL_SIZE / 2) - view.pos[1]
-    // );
+    if (world.player.keys) {
+        ctx.drawImage(TILESET, SPRITES.KEY[0] * SPRITE_SIZE, SPRITES.KEY[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
+            CELL_SIZE - Math.round(CELL_SIZE / 2),
+            (CELL_SIZE * 3) - Math.round(CELL_SIZE / 2),
+            CELL_SIZE, CELL_SIZE
+        );
+        ctx.fillStyle = COLORS.GOLD;
+        ctx.fillText(world.player.keys,
+            CELL_SIZE * 2,
+            CELL_SIZE * 3
+        );
+    }
 
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -1912,7 +1761,7 @@ function onClickHandler() {
 
     // Creatures
     if (!handled) {
-        let creaturesInView = world.creatures.filter(creature => inView(creature.pos, creature.size) && onMouseInView(mouse, creature));
+        let creaturesInView = world.creatures.filter(creature => inView(creature.pos, creature.size) && onMouseInView(creature));
         if (creaturesInView.length) creaturesInView.forEach(creature => {
             controller.dragCreature = creature;
             handled = true;
@@ -1930,16 +1779,25 @@ function onClickHandler() {
 
     // Stores
     if (!handled) {
-        let storesInView = world.stores.filter(store => inView(store.pos, store.size) && onMouseInView(mouse, store));
+        let storesInView = world.stores.filter(store => inView(store.pos, store.size) && onMouseInView(store));
         if (storesInView.length) storesInView.forEach(store => {
             handled = true;
             if (store.onClick != undefined) store.onClick(store);
         });
     }
 
+    // Items
+    if (!handled) {
+        let itemsInView = world.items.filter(item => item.itemType == 'equip' && inView(item.pos, item.size) && onMouseInView(item));
+        if (itemsInView.length) itemsInView.forEach(item => {
+            handled = true;
+            if (item.onClick != undefined) item.onClick(item);
+        });
+    }
+
     // Drag map
     if (!handled) {
-        controller.dragMap = true;
+        // controller.dragMap = true;
     }
 
     if (!handled && DEBUG) {
@@ -1999,10 +1857,10 @@ function onDragHandler() {
     if (controller.dragMap) view.pos = vAdd(view.startPos, viewMousePosDelta);
 }
 
-function onMouse(mouse, obj) {
+function onMouse(obj) {
     return (mouse.pos != null && mouse.pos[0] >= obj.pos[0] - (obj.size / 2) && mouse.pos[0] <= obj.pos[0] + (obj.size / 2) && mouse.pos[1] >= obj.pos[1] - (obj.size / 2) && mouse.pos[1] <= obj.pos[1] + (obj.size / 2));
 }
-function onMouseInView(mouse, obj) {
+function onMouseInView(obj) {
     let viewMousePos = vAdd(mouse.pos, view.pos);
     return (mouse.pos != null && viewMousePos[0] >= obj.pos[0] - (obj.size / 2) && viewMousePos[0] <= obj.pos[0] + (obj.size / 2) && viewMousePos[1] >= obj.pos[1] - (obj.size / 2) && viewMousePos[1] <= obj.pos[1] + (obj.size / 2));
 }
