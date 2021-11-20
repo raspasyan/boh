@@ -186,7 +186,7 @@ if (world) {
                 'hp': 1,
                 'attack': [30, 30],
                 'attackRepeat': 0,
-                'attackRepeatMulti': 50,
+                'attackRepeatMulti': 10000,
                 'attackDamage': 0,
                 'attackRange': CELL_SIZE * 1.2,
                 'attackPower': -1,
@@ -256,19 +256,19 @@ if (world) {
                     ''
                 ],
                 'color': 'pink', //COLORS.BAD,
-                'onDrop': (thisCreature) => {
+                'onDrop': (self) => {
                     let goldCount = 300;
                     while (goldCount) {
-                        let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                        let randomPos = [self.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, self.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
                         world.splashes.push({
-                            'pos': thisCreature.pos,
+                            'pos': self.pos,
                             'life': [0, 30],
                             'size': CELL_SIZE / 2,
                             'sprite': SPRITES.COIN,
                             'fadeIn': true,
                             'points': [
-                                thisCreature.pos,
-                                getPosBetween(thisCreature.pos, randomPos),
+                                self.pos,
+                                getPosBetween(self.pos, randomPos),
                                 randomPos,
                             ],
                             'onDrop': () => world.items.push({
@@ -333,11 +333,8 @@ if (world) {
                 'faction': 'mine',
                 'enemyFactions': [],
                 'color': COLORS.GRAY,
-                'onHit': (self) => {
+                'onHit': (self, projectile) => {
                     if (Math.random() >= .9) {
-                        let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
-                        let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
-
                         world.splashes.push({
                             'pos': self.pos,
                             'life': [0, 30],
@@ -346,13 +343,13 @@ if (world) {
                             'fadeIn': true,
                             'points': [
                                 self.pos,
-                                getPosBetween(self.pos, randomPos),
-                                randomPos,
+                                getPosBetween(self.pos, projectile.owner.pos),
+                                projectile.owner.pos,
                             ],
                             'onDrop': () => world.items.push({
                                 'type': 'item',
                                 'itemType': 'gold',
-                                'pos': randomPos,
+                                'pos': projectile.owner.pos,
                                 'sprite': SPRITES.COIN,
                                 'size': CELL_SIZE,
                                 'animation': Math.random(),
@@ -385,25 +382,23 @@ if (world) {
                 'faction': 'mine',
                 'enemyFactions': [],
                 'color': COLORS.GRAY,
-                'onHit': (thisCreature) => {
+                'onHit': (self, projectile) => {
                     if (Math.random() >= .8) {
-                        let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-
                         world.splashes.push({
-                            'pos': thisCreature.pos,
+                            'pos': self.pos,
                             'life': [0, 30],
                             'size': CELL_SIZE / 2,
                             'sprite': SPRITES.COIN,
                             'fadeIn': true,
                             'points': [
-                                thisCreature.pos,
-                                getPosBetween(thisCreature.pos, randomPos),
-                                randomPos,
+                                self.pos,
+                                getPosBetween(self.pos, projectile.owner.pos),
+                                projectile.owner.pos,
                             ],
                             'onDrop': () => world.items.push({
                                 'type': 'item',
                                 'itemType': 'gold',
-                                'pos': randomPos,
+                                'pos': projectile.owner.pos,
                                 'sprite': SPRITES.COIN,
                                 'size': CELL_SIZE,
                                 'animation': Math.random(),
@@ -436,25 +431,23 @@ if (world) {
                 'faction': 'mine',
                 'enemyFactions': [],
                 'color': COLORS.GRAY,
-                'onHit': (thisCreature) => {
+                'onHit': (self, projectile) => {
                     if (Math.random() >= .95) {
-                        let randomPos = [thisCreature.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, thisCreature.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-
                         world.splashes.push({
-                            'pos': thisCreature.pos,
+                            'pos': self.pos,
                             'life': [0, 30],
                             'size': CELL_SIZE / 2,
                             'sprite': SPRITES.CRYSTALL,
                             'fadeIn': true,
                             'points': [
-                                thisCreature.pos,
-                                getPosBetween(thisCreature.pos, randomPos),
-                                randomPos,
+                                self.pos,
+                                getPosBetween(self.pos, projectile.owner.pos),
+                                projectile.owner.pos,
                             ],
                             'onDrop': () => world.items.push({
                                 'type': 'item',
                                 'itemType': 'crystall',
-                                'pos': randomPos,
+                                'pos': projectile.owner.pos,
                                 'sprite': SPRITES.CRYSTALL,
                                 'size': CELL_SIZE,
                                 'animation': Math.random(),
@@ -462,7 +455,7 @@ if (world) {
                         });
                     }
                 },
-                'onDrop': () => console.log('dropped')
+                'onDrop': (self) => {}
             },
             // Дом
             {
@@ -489,7 +482,9 @@ if (world) {
                 'color': COLORS.GRAY,
                 'onHit': (self) => {
                     if (Math.random() >= .9) {
-                        let randomPos = [self.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, self.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                        // let randomPos = [self.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, self.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                        let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                        let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
                         world.splashes.push({
                             'pos': self.pos,
@@ -668,23 +663,43 @@ if (world) {
             {
                 'type': 'item',
                 'itemType': 'equip',
+                'title': 'Sword+',
+                'color': COLORS.WHEAT,
                 'equipType': 'weapon',
                 'pos': [CELL_SIZE * 1, CELL_SIZE * 4],
                 'sprite': SPRITES.I_SWORD_01,
                 'size': CELL_SIZE,
                 'animation': Math.random() * 5,
-                'onClick': (self) => {}
+                'onEquip': (self, creature) => {
+                    creature.attackDamage += 5;
+                    creature.attackPower -= 1;
+                },
+                'onUnequip': (self, creature) => {
+                    creature.attackDamage -= 5;
+                    creature.attackPower += 1;
+                },
             },
             // armor
             {
                 'type': 'item',
                 'itemType': 'equip',
                 'equipType': 'weapon',
+                'title': 'Armor+',
+                'color': COLORS.WHEAT,
                 'pos': [CELL_SIZE * 2, CELL_SIZE * 5],
                 'sprite': SPRITES.I_ARMOR_01,
                 'size': CELL_SIZE,
                 'animation': Math.random() * 10,
-                'onClick': (self) => {}
+                'onEquip': (self, creature) => {
+                    creature.hp += 50;
+                },
+                'onUnequip': (self, creature) => {
+                    if (creature.hp > 50) {
+                        creature.hp -= 50;
+                    } else {
+                        creature.hp = 1;
+                    }
+                },
             },
         ],
         'stores': [
@@ -701,30 +716,34 @@ if (world) {
                 'onClick': self => {
                     if (self.restock[0] == self.restock[1]) {
                         if (world.player.gold >= 10) {
-                            // let randomPos = [self.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, self.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-                            let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[0] + (-1 + Math.random() * 2)]));
-                            let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
+                            let count = 10;
+                            while (count) {
+                                let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                                let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
-                            world.splashes.push({
-                                'pos': self.pos,
-                                'life': [0, 30],
-                                'size': CELL_SIZE / 2,
-                                'sprite': SPRITES.MEAT,
-                                'fadeIn': true,
-                                'points': [
-                                    self.pos,
-                                    getPosBetween(self.pos, randomPos),
-                                    randomPos,
-                                ],
-                                'onDrop': () => world.items.push({
-                                    'type': 'item',
-                                    'itemType': 'food',
-                                    'pos': randomPos,
+                                world.splashes.push({
+                                    'pos': self.pos,
+                                    'life': [0, 30],
+                                    'size': CELL_SIZE / 2,
                                     'sprite': SPRITES.MEAT,
-                                    'size': CELL_SIZE,
-                                    'animation': Math.random(),
-                                })
-                            });
+                                    'fadeIn': true,
+                                    'points': [
+                                        self.pos,
+                                        getPosBetween(self.pos, randomPos),
+                                        randomPos,
+                                    ],
+                                    'onDrop': () => world.items.push({
+                                        'type': 'item',
+                                        'itemType': 'food',
+                                        'pos': randomPos,
+                                        'sprite': SPRITES.MEAT,
+                                        'size': CELL_SIZE,
+                                        'animation': Math.random(),
+                                    })
+                                });
+
+                                count--;
+                            }
                             
                             world.player.gold -= 10;
                             self.restock[0] = 0;
@@ -755,7 +774,7 @@ if (world) {
                 'onClick': self => {
                     if (self.restock[0] == self.restock[1]) {
                         if (world.player.gold >= self.countToGive) {
-                            let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[0] + (-1 + Math.random() * 2)]));
+                            let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
                             let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
                             world.creatures.push({
@@ -931,6 +950,8 @@ let view = {
     height: 480
 };
 
+let drawList = [];
+
 document.addEventListener("DOMContentLoaded", function () {
     let cvs = document.getElementById("game");
     let ctx = cvs.getContext("2d");
@@ -1003,15 +1024,14 @@ document.addEventListener("DOMContentLoaded", function () {
         // }
     });
 
-    onFrameHandler();
-
-    function onFrameHandler() {
-        render(cvs, ctx);
-        requestAnimationFrame(onFrameHandler);
+    onEnterFrame();
+    function onEnterFrame() {
+        onEnterFrameHandler(cvs, ctx);
+        requestAnimationFrame(onEnterFrame);
     }
 });
 
-function render(cvs, ctx) {
+function onEnterFrameHandler(cvs, ctx) {
     ctx.fillStyle = COLORS.BACKGROUND;
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
@@ -1021,11 +1041,11 @@ function render(cvs, ctx) {
     // Draw stores
     if (world.stores.length) drawStores(ctx, world.stores);
 
-    // Draw items
-    if (world.items.length) drawItems(ctx, world.items);
-
     // Draw creatures
     if (world.creatures.length) drawCreatures(ctx, world.creatures);
+
+    // Draw items
+    if (world.items.length) drawItems(ctx, world.items);
 
     // Draw projectiles
     if (world.projectiles.length) drawProjectiles(ctx, world.projectiles);
@@ -1048,7 +1068,18 @@ function render(cvs, ctx) {
     drawUI(ctx);
 
     if (editor.enabled) drawEditor(ctx);
+
+    // render();
 }
+
+// function render() {
+//     let drawLayers = [];
+//     drawList.forEach(e => {
+//         drawList[e.layer].push(e);
+//     });
+
+//     console.log(drawLayers);
+// }
 
 function drawSprites(ctx, sprites) {
     let spritesDown = sprites.filter(e => e.layer == 0);
@@ -1084,8 +1115,6 @@ function drawSprite(ctx, element) {
 function drawProjectiles(ctx, projectiles) {
     projectiles.forEach(projectile => {
         if (projectile.life[0] != projectile.life[1]) {
-            // let nextPos = getNextPosByBezier(back(1.5, projectile.life[0] / projectile.life[1]), projectile.points);
-            // let nextPos = getNextPosByBezier(bounceEaseOut(projectile.life[0] / projectile.life[1]), projectile.points);
             let nextPos = getNextPosByBezier(projectile.life[0] / projectile.life[1], projectile.points);        
             if (inView(projectile.pos, projectile.size)) {
                 let rad = angleBetweenVectors(vNormal(vSub(projectile.pos, nextPos)), [-1,0]);
@@ -1147,7 +1176,7 @@ function drawProjectiles(ctx, projectiles) {
                         ]
                     });
 
-                    if (foe.onHit != undefined) foe.onHit(foe);
+                    if (foe.onHit != undefined) foe.onHit(foe, projectile);
                     
                     count--;
                 }
@@ -1161,12 +1190,96 @@ function drawProjectiles(ctx, projectiles) {
 function drawItems(ctx, items) {
     items.forEach(item => {
         if (inView(item.pos, item.size)) {
-            item.animation += .1;
+            // Join same items
+            let sameItems = world.items.filter(otherItem => item != otherItem && otherItem.itemType == item.itemType && item.itemType != 'equip' && vLength(vSub(item.pos, otherItem.pos)) <= ((item.size + otherItem.size) / 2));
+            if (sameItems.length) sameItems.forEach(otherItem => {
+                if (item.count == undefined) item.count = 1;
+                item.count += (otherItem.count != undefined ? otherItem.count : 1);
+
+                world.splashes.push({
+                    'pos': otherItem.pos,
+                    'life': [0, 10],
+                    'size': CELL_SIZE / 2,
+                    'sprite': otherItem.sprite,
+                    'fadeOut': true,
+                    'points': [
+                        otherItem.pos,
+                        item.pos
+                    ]
+                });
+
+                dropObj(items, otherItem);
+            });
+
+            let selected = false;
+
+            if (item.spriteAnimation == undefined) item.spriteAnimation = Math.random() * 10;
+            item.spriteAnimation += .1;
+
+            // Shadow
+            ctx.save();
+            ctx.scale(1, .5);
+            ctx.globalAlpha = .2;
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc((item.pos[0] - view.pos[0]), (item.pos[1] - view.pos[1] + CELL_SIZE / 4) * 2, (CELL_SIZE / 4) + Math.cos(item.spriteAnimation) * 2, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            let scale = 1 + (item.count != undefined ? item.count / 100 : 0);
+            if (scale > 2) scale = 2;
             ctx.drawImage(TILESET, item.sprite[0] * SPRITE_SIZE, item.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
-                Math.round(item.pos[0] - Math.round(item.size / 2) - view.pos[0]),
-                Math.round(item.pos[1] - Math.round(item.size / 2) - view.pos[1] - Math.cos(item.animation) * 4),
-                item.size, item.size
+                Math.round(item.pos[0] - Math.round(item.size * scale / 2) - view.pos[0]),
+                Math.round(item.pos[1] - Math.round(item.size * scale / 2) - view.pos[1] - Math.cos(item.spriteAnimation) * 4),
+                item.size * scale, item.size * scale
             );
+
+            if (onMouseInView(item)) {
+                if (item.boxAnimation == undefined) item.boxAnimation = 0;
+                item.boxAnimation += .1;
+                selected = true;
+            } else {
+                item.boxAnimation = 0;
+            }
+
+            if (selected) {
+                ctx.drawImage(TILESET, SPRITES.BOX[0] * SPRITE_SIZE, SPRITES.BOX[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
+                    Math.round(item.pos[0] - (item.size / 2) - Math.cos(item.boxAnimation) * 2 - view.pos[0]),
+                    Math.round(item.pos[1] - (item.size / 2) - Math.cos(item.boxAnimation) * 2 - view.pos[1]),
+                    item.size + Math.cos(item.boxAnimation) * 4, item.size + Math.cos(item.boxAnimation) * 4
+                );
+
+                if (item.title || item.count != undefined) {
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 1;
+                    ctx.shadowColor = "black";
+
+                    ctx.font = SM_FONT;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+
+                    let textToDraw = (item.count != undefined ? 'x' + item.count : item.title);
+                    let measure = ctx.measureText(textToDraw);
+                    ctx.save();
+                    ctx.globalAlpha = .2;
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(item.pos[0] - view.pos[0] - Math.round((measure.width + 8) / 2), item.pos[1] - view.pos[1] - CELL_SIZE * .8 - 8, (measure.width + 8), 16);
+                    ctx.restore();
+
+                    ctx.fillStyle = item.color;
+                    ctx.fillText(textToDraw,
+                        item.pos[0] - view.pos[0],
+                        item.pos[1] - view.pos[1] - CELL_SIZE * .8
+                    );
+
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                    ctx.shadowColor = "";
+                }
+            }
+        } else {
+            if (item.spriteAnimation != undefined) item.spriteAnimation = undefined;  
         }
 
         let allyCreatures = world.creatures.filter(creature => creature.faction == 'ally' && vLength(vSub(item.pos, creature.pos)) <= ((item.size + creature.size) / 2));
@@ -1185,23 +1298,23 @@ function drawItems(ctx, items) {
 
             switch (item.itemType) {
                 case "gold": {
-                    world.player.gold += 1;
+                    world.player.gold += (item.count != undefined ? item.count : 1);
                     break;
                 }
                 case "weapon": {
-                    allyCreature.attackDamage += 1;
+                    allyCreature.attackDamage += (item.count != undefined ? item.count : 1);
                     break;
                 }
                 case "crystall": {
-                    world.player.crystalls += 1;
+                    world.player.crystalls += (item.count != undefined ? item.count : 1);
                     break;
                 }
                 case "key": {
-                    world.player.keys += 1;
+                    world.player.keys += (item.count != undefined ? item.count : 1);
                     break;
                 }
                 case "food": {
-                    allyCreature.hp += 1;
+                    allyCreature.hp += (item.count != undefined ? item.count : 1);
                     break;
                 }
                 case "equip": {
@@ -1224,7 +1337,11 @@ function drawItems(ctx, items) {
                             ],
                             'onDrop': () => world.items.push(itemClone)
                         });
+
+                        allyCreature.equip.onUnequip(allyCreature.equip, allyCreature);
                     }
+
+                    item.onEquip(item, allyCreature);
                     
                     allyCreature.equip = item;
 
@@ -1801,21 +1918,24 @@ function onClickHandler() {
     }
 
     if (!handled && DEBUG) {
+        let randomDir = vNormal(vSub(viewMousePos, [viewMousePos[0] + (-1 + Math.random() * 2), viewMousePos[1] + (-1 + Math.random() * 2)]));
+        let randomPos = getNextPos(viewMousePos, randomDir, CELL_SIZE);
+
         world.splashes.push({
-            'pos': [0,0],
+            'pos': viewMousePos,
             'life': [0, 30],
             'size': CELL_SIZE / 2,
             'sprite': SPRITES.MEAT,
             'fadeIn': true,
             'points': [
-                [0,0],
-                getPosBetween([0,0], viewMousePos),
                 viewMousePos,
+                getPosBetween(viewMousePos, randomPos),
+                randomPos,
             ],
             'onDrop': () => world.items.push({
                 'type': 'item',
                 'itemType': 'food',
-                'pos': viewMousePos,
+                'pos': randomPos,
                 'sprite': SPRITES.MEAT,
                 'size': CELL_SIZE,
                 'animation': 0,
