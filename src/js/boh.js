@@ -1222,7 +1222,7 @@ function drawItems(ctx, items) {
             ctx.globalAlpha = .2;
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc((item.pos[0] - view.pos[0]), (item.pos[1] - view.pos[1] + CELL_SIZE / 4) * 2, (CELL_SIZE / 4) + Math.cos(item.spriteAnimation) * 2, 0, Math.PI * 2, true);
+            ctx.arc((item.pos[0] - view.pos[0]), (item.pos[1] - view.pos[1] + CELL_SIZE / 2) * 2, (CELL_SIZE / 4) + Math.cos(item.spriteAnimation) * 2, 0, Math.PI * 2, true);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
