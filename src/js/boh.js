@@ -77,6 +77,7 @@ const SPRITES = {
     PR_SWORD: [20, 3],
     PR_ARROW: [19, 6],
     PR_SPEAR: [20, 3],
+    PR_FIRE: [11, 22],
     SIGN_01: [4, 2],
     SIGN_02: [5, 2],
     PEASANT: [17, 21],
@@ -122,7 +123,7 @@ let editor = {
 }
 
 // DEBUG
-let AI = 0;
+let AI = 1;
 let DEBUG = 1;
 
 // Loading objects
@@ -154,7 +155,10 @@ if (world) {
     }
 }
 // world = JSON.parse(str);
-world.player.king = world.creatures[0];
+if (world.creatures.length) {
+    let allyCreatures = world.creatures.filter(e => e.faction == world.player.faction);
+    if (allyCreatures.length) world.player.king = allyCreatures[0];
+}
 
 // Viewer
 let view = {
@@ -385,8 +389,8 @@ function drawProjectiles(ctx, projectiles) {
         } else {
             let foes = world.creatures.filter(creature => creature.faction != projectile.owner.faction && vLength(vSub(projectile.pos, creature.pos)) <= ((projectile.size + creature.size) / 2));
             if (foes.length) foes.forEach(foe => {
-                let damage = (projectile.owner.attackDamage <= foe.hp ? projectile.owner.attackDamage : foe.hp);
-                foe.hp -= damage;
+                let damage = (projectile.owner.attackDamage <= foe.hp[0] ? projectile.owner.attackDamage : foe.hp[0]);
+                foe.hp[0] -= damage;
                 if (projectile.owner.attackPower) foe.sp = vMultScalar(vNormal(vSub(projectile.pos, foe.pos)), -projectile.owner.attackPower);
 
                 let count = damage;
@@ -543,7 +547,8 @@ function drawItems(ctx, items) {
                     break;
                 }
                 case "food": {
-                    allyCreature.hp += (item.count != undefined ? item.count : 1);
+                    allyCreature.hp[0] += (item.count != undefined ? item.count : 1);
+                    if (allyCreature.hp[0] > allyCreature.hp[1]) allyCreature.hp[0] = allyCreature.hp[1];
                     break;
                 }
                 case "equip": {
@@ -650,10 +655,11 @@ function drawStores(ctx, stores) {
 
 function drawCreatures(ctx, creatures) {
     creatures.forEach(currentCreature => {
-        if (currentCreature.hp > 0) {
-            if (currentCreature.startPos == undefined) currentCreature.startPos = currentCreature.pos;
+        if (currentCreature.hp[0] > 0) {
             // AI
-            if (currentCreature.faction != world.player.faction && currentCreature.speed) {
+            if (AI && world.player.king != currentCreature && currentCreature.speed) {
+                if (currentCreature.startPos == undefined) currentCreature.startPos = currentCreature.pos;
+
                 if (currentCreature.attackDamage) {
                     let foe = null;
                     let closestDistance = null;
@@ -776,7 +782,6 @@ function drawCreatures(ctx, creatures) {
             if (inView(currentCreature.pos, currentCreature.size)) {
                 let selected = false;
                 let sizeScale = 1;
-                if (currentCreature.sizeScaleLimit) sizeScale = (currentCreature.hp < currentCreature.sizeScaleLimit ?  1 + (currentCreature.hp / currentCreature.sizeScaleLimit) : 2);
                 let trueSize = currentCreature.size * sizeScale;
 
                 if (onMouseInView(currentCreature)) {
@@ -840,14 +845,14 @@ function drawCreatures(ctx, creatures) {
                     );
                 }
 
-                if (currentCreature.hp != undefined) {
+                if (currentCreature.hp[0] != undefined) {
                     ctx.drawImage(TILESET, currentCreature.healthSprite[0] * SPRITE_SIZE, currentCreature.healthSprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
                         Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .25) - view.pos[0]),
                         Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 2.2) - view.pos[1]),
                         CELL_SIZE / 2, CELL_SIZE / 2
                     );
                     ctx.fillStyle = currentCreature.color;
-                    ctx.fillText(currentCreature.hp,
+                    ctx.fillText((currentCreature.hp[0] == currentCreature.hp[1] ? currentCreature.hp[0] : currentCreature.hp[0] + "/" + currentCreature.hp[1]),
                         currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
                         currentCreature.pos[1] + Math.round(CELL_SIZE * .75) - view.pos[1]
                     );
@@ -891,10 +896,18 @@ function drawCreatures(ctx, creatures) {
                     ctx.arc(currentCreature.pos[0] - view.pos[0], currentCreature.pos[1] - view.pos[1], currentCreature.size / 2, 0, Math.PI * 2, true);
                     ctx.closePath();
                     ctx.stroke();
+                    if (currentCreature.startPos != undefined) {
+                        ctx.drawImage(TILESET, SPRITES.BOX[0] * SPRITE_SIZE, SPRITES.BOX[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE,
+                            Math.round(currentCreature.startPos[0] - (CELL_SIZE / 2) - view.pos[0]),
+                            Math.round(currentCreature.startPos[1] - (CELL_SIZE / 2) - view.pos[1]),
+                            CELL_SIZE,
+                            CELL_SIZE
+                        );
+                    }
                 }
             }
         } else {
-            if (currentCreature.onDrop != undefined) currentCreature.onDrop(currentCreature);
+            if (currentCreature.onDrop != undefined) trigger(currentCreature, currentCreature.onDrop);
 
             dropObj(world.creatures, currentCreature);
         }
@@ -1097,16 +1110,6 @@ function onClickHandler() {
     let viewMousePosDelta = vSub(viewMouseStartPos, viewMousePos);
 
     let handled = false;
-
-    // Creatures
-    if (!handled) {
-        let creaturesInView = world.creatures.filter(creature => inView(creature.pos, creature.size) && onMouseInView(creature));
-        if (creaturesInView.length) creaturesInView.forEach(creature => {
-            controller.selectedObj = creature;
-            handled = true;
-        });
-    }
-
     if (editor.enabled) {
         if (editor.viewMode) {
             controller.dragMap = true;
@@ -1114,6 +1117,16 @@ function onClickHandler() {
             handleEditor();
         }
     } else {
+        // Creatures
+        if (!handled) {
+            let creaturesInView = world.creatures.filter(creature => inView(creature.pos, creature.size) && onMouseInView(creature) && creature.faction == world.player.faction);
+            if (creaturesInView.length) creaturesInView.forEach(creature => {
+                world.player.king.startPos = world.player.king.pos;
+                world.player.king = creature;
+                handled = true;
+            });
+        }
+
         // Stores
         if (!handled) {
             let storesInView = world.stores.filter(store => inView(store.pos, store.size) && onMouseInView(store));
@@ -1192,10 +1205,7 @@ function handlePlayer() {
     let viewMousePos = vAdd(mouse.pos, view.pos);
     if (controller.mouse && world.player.king.attack[0] == world.player.king.attack[1]) {
         let targetPos = getNextPos(world.player.king.pos, vNormal(vSub(world.player.king.pos, viewMousePos)), world.player.king.attackRange);
-
-        // let dir = vNormal(vSub(world.player.king.pos, vAdd(mouse.pos, view.pos)));
-        // let nextPos = getNextPos(world.player.king.pos, dir, world.player.king.attackRange);
-        createProjectile(world.player.king, targetPos);
+        createProjectile(world.player.king, getNearestPos(world.player.king, targetPos, true));
     }
 }
 function handleEditor() {

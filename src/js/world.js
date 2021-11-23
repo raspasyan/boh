@@ -21,14 +21,13 @@ world = {
             'sprite': SPRITES.PEASANT,
             'healthSprite': SPRITES.HEART,
             'size': CELL_SIZE,
-            'sizeScaleLimit': 1000,
             'target': null,
             'speed': 2,
-            'hp': 1000,
+            'hp': [99, 99],
             'attack': [30, 30],
             'attackDamage': 1,
             'attackRange': CELL_SIZE * 2,
-            'attackPower': -1,
+            'attackPower': 1,
             'attackType': 'melee',
             'attackSprite': SPRITES.PR_SWORD,
             'attackRotation': true,
@@ -41,32 +40,30 @@ world = {
             ],
             'color': '#cddc39'
         },
-        // вор
+        // Некромант
         {
             'type': 'creature',
             'pos': [CELL_SIZE * 0, CELL_SIZE * -3],
             'sprite': SPRITES.ROGUE,
-            'healthSprite': SPRITES.HELMET,
+            'healthSprite': SPRITES.HEART,
             'size': CELL_SIZE,
-            'sizeScaleLimit': 1000,
             'target': null,
-            'speed': 2,
-            'hp': 10,
-            'attack': [45, 45],
-            'attackRepeat': 0,
-            'attackRepeatMulti': 5,
+            'speed': 1.5,
+            'hp': [25, 25],
+            'attack': [30, 30],
             'attackDamage': 1,
-            'attackRange': CELL_SIZE * 1.2,
+            'attackRange': CELL_SIZE * 4,
             'attackPower': -1,
-            'attackType': 'melee',
-            'attackSprite': SPRITES.PR_SWORD,
+            'attackType': 'ranged',
+            'attackSprite': SPRITES.PR_FIRE,
             'attackRotation': true,
             'faction': 'evil',
             'enemyFactions': [
                 'ally',
                 'orcs'
             ],
-            'color': COLORS.WHEAT
+            'color': COLORS.WHEAT,
+            'onDrop': 'dropGold50'
         },
         // Орочий босс
         {
@@ -324,7 +321,6 @@ world = {
             'color': COLORS.GRAY,
             'onHit': (self) => {
                 if (Math.random() >= .9) {
-                    // let randomPos = [self.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, self.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
                     let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
                     let randomPos = getNextPos(self.pos, randomDir, CELL_SIZE);
 
