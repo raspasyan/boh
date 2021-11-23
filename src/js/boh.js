@@ -111,7 +111,9 @@ let editor = {
     'enabled': false,
     'mode': 'draw',
     'drawLayer': 0,
-    'drawAnimate': 0,
+    'drawAnimate': false,
+    'transparentBlock': false,
+    'copyMode': false,
     'viewMode': true,
     'eraserMode': false,
     'pos': [0, 0],
@@ -210,6 +212,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 editor.eraserMode = true;
                 editor.viewMode = false;
             }
+
+            if (e.code == 'KeyZ') editor.drawAnimate = !editor.drawAnimate;
+            if (e.code == 'KeyX') editor.transparentBlock = !editor.transparentBlock;
+
+            if (e.code == 'KeyC') {
+                editor.copyMode = true;
+                editor.viewMode = false;
+            }
         } else {
             if (e.code == "KeyW") controller.up     = true;
             if (e.code == "KeyS") controller.down   = true;
@@ -228,6 +238,10 @@ document.addEventListener("DOMContentLoaded", function () {
             if (e.code == "ShiftLeft") editor.viewMode = true;
             if (e.code == "ControlLeft") {
                 editor.eraserMode = false;
+                editor.viewMode = true;
+            }
+            if (e.code == 'KeyC') {
+                editor.copyMode = false;
                 editor.viewMode = true;
             }
         } else {
@@ -312,14 +326,14 @@ function drawSprite(ctx, element) {
 
     if (element.animation != undefined) {
         if (element.animation != undefined) {
-            element.animation += .1;
+            element.animation += (Math.random() / 10) * (Math.round(Math.random) ? 1 : -1);
         } else {
             element.animation = 0;
         }
 
         ctx.save();
         ctx.translate(Math.round(element.pos[0] - view.pos[0]), Math.round(element.pos[1] - view.pos[1] + Math.round(element.size / 2)));
-        ctx.rotate((Math.cos(element.animation) * 5) * Math.PI / 180);
+        ctx.rotate((Math.cos(element.animation) * 4) * Math.PI / 180);
         ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(element.size / 2) , - Math.round(element.size), element.size, element.size);
         ctx.restore();
     } else {
@@ -846,7 +860,7 @@ function drawCreatures(ctx, creatures) {
                         CELL_SIZE / 2, CELL_SIZE / 2
                     );
                     ctx.fillStyle = COLORS.GRAY;
-                    ctx.fillText((currentCreature.hp <= currentCreature.attackRepeatMulti ? currentCreature.attackDamage : currentCreature.attackDamage + '*' + Math.ceil(currentCreature.hp / currentCreature.attackRepeatMulti)),
+                    ctx.fillText(currentCreature.attackDamage,
                         currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
                         currentCreature.pos[1] + Math.round(CELL_SIZE * .75) + Math.round(CELL_SIZE / 2) - view.pos[1]
                     );
@@ -967,7 +981,7 @@ function drawEditor(ctx) {
         EDITOR_CELL_SIZE, EDITOR_CELL_SIZE
     );
     
-    ctx.font = MD_FONT;
+    ctx.font = SM_FONT;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -992,14 +1006,30 @@ function drawEditor(ctx) {
     );
 
     ctx.fillStyle = (editor.viewMode ? "LIME" : "CRIMSON");
-    ctx.fillText("MOVE",
+    ctx.fillText("VI",
         CELL_SIZE,
         Math.round(CELL_SIZE * 6 + (CELL_SIZE / 2))
     );
     ctx.fillStyle = (editor.eraserMode ? "LIME" : "CRIMSON");
-    ctx.fillText("ERASE",
+    ctx.fillText("ER",
+        CELL_SIZE * 2,
+        Math.round(CELL_SIZE * 6 + (CELL_SIZE / 2))
+    );
+    ctx.fillStyle = (editor.copyMode ? "LIME" : "CRIMSON");
+    ctx.fillText("CP",
         CELL_SIZE * 3,
         Math.round(CELL_SIZE * 6 + (CELL_SIZE / 2))
+    );
+
+    ctx.fillStyle = (editor.drawAnimate ? "LIME" : "CRIMSON");
+    ctx.fillText("AN",
+        CELL_SIZE,
+        Math.round(CELL_SIZE * 7 + (CELL_SIZE / 2))
+    );
+    ctx.fillStyle = (editor.transparentBlock ? "LIME" : "CRIMSON");
+    ctx.fillText("TR",
+        CELL_SIZE * 2,
+        Math.round(CELL_SIZE * 7 + (CELL_SIZE / 2))
     );
 
     ctx.restore();
@@ -1160,14 +1190,12 @@ function handlePlayer() {
     }
 
     let viewMousePos = vAdd(mouse.pos, view.pos);
-    if (controller.mouse &&
-            world.player.king.attack[0] == world.player.king.attack[1] &&
-            vLength(vSub(world.player.king.pos, viewMousePos)) <= world.player.king.attackRange &&
-            isReachable(world.player.king, [viewMousePos[0], viewMousePos[1]])) {
+    if (controller.mouse && world.player.king.attack[0] == world.player.king.attack[1]) {
+        let targetPos = getNextPos(world.player.king.pos, vNormal(vSub(world.player.king.pos, viewMousePos)), world.player.king.attackRange);
 
         // let dir = vNormal(vSub(world.player.king.pos, vAdd(mouse.pos, view.pos)));
         // let nextPos = getNextPos(world.player.king.pos, dir, world.player.king.attackRange);
-        createProjectile(world.player.king, viewMousePos);
+        createProjectile(world.player.king, targetPos);
     }
 }
 function handleEditor() {
@@ -1180,9 +1208,15 @@ function handleEditor() {
     switch (editor.mode) {
         case "draw": {
             let objectsToReplace = world.sprites.filter(e => e.pos[0] == viewMousePosGrid[0] && e.pos[1] == viewMousePosGrid[1] && e.layer == editor.drawLayer);
-            if (objectsToReplace.length) objectsToReplace.forEach(e => dropObj(world.sprites, e));
+            if (objectsToReplace.length) {
+                if (editor.copyMode) {
+                    editor.sprite = [objectsToReplace[0].sprite[0], objectsToReplace[0].sprite[1]];
+                } else {
+                    objectsToReplace.forEach(e => dropObj(world.sprites, e));
+                }
+            }
 
-            if (!editor.eraserMode) world.sprites.push({
+            if (!editor.eraserMode && !editor.copyMode) world.sprites.push({
                 'pos': viewMousePosGrid,
                 'sprite': [editor.sprite[0], editor.sprite[1]],
                 'size': CELL_SIZE,
@@ -1194,35 +1228,25 @@ function handleEditor() {
         }
 
         case "place": {
-            
-            let objectsToReplace = world.creatures.filter(e => e.pos[0] == viewMousePosGrid[0] && e.pos[1] == viewMousePosGrid[1]);
+            let objectsToReplace = world.creatures.filter(e => onMouseInView(e));
             if (objectsToReplace.length) {
-                console.log(objectsToReplace);
-                objectsToReplace.forEach(e => dropObj(world.creatures, e));
+                if (editor.copyMode) {
+                    editor.objToPlace = Object.assign({}, objectsToReplace[0]);
+                } else {
+                    objectsToReplace.forEach(e => dropObj(world.creatures, e));
+                }
             }
-            // if (controller.selectedObj && editor.eraserMode) {
-            //     switch (controller.selectedObj.type) {
-            //         case "creature": {
-            //             dropObj(world.creatures, controller.selectedObj);
-            //             break;
-            //         }
-            //     }
-            // }
-            // console.log(controller.selectedObj);
-            // let objectsToReplace = world.creatures.filter(e => e.pos[0] == viewMousePosGrid[0] && e.pos[1] == viewMousePosGrid[1]);
-            // if (objectsToReplace.length) objectsToReplace.forEach(e => dropObj(world.items, e));
+
             let blocks = world.blocks.filter(e => e.pos[0] == viewMousePosGrid[0] && e.pos[1] == viewMousePosGrid[1]);
             if (!blocks.length) {
-                if (editor.objToPlace && !editor.eraserMode) {
+                if (editor.objToPlace && !editor.eraserMode && !editor.copyMode) {
                     let objToPlace = Object.assign({}, editor.objToPlace, {
                         'pos': viewMousePosGrid,
                         'sprite': [editor.sprite[0], editor.sprite[1]]
                     });
-                    // console.log(editor.objToPlace);
-                    if (!editor.eraserMode) world.creatures.push(objToPlace);
+                    world.creatures.push(objToPlace);
                 }   
             }
-            
 
             break;
         }
@@ -1235,7 +1259,7 @@ function handleEditor() {
                 'type': 'block',
                 'pos': viewMousePosGrid,
                 'size': CELL_SIZE,
-                'transparent': false
+                'transparent': editor.transparentBlock
             });
 
             break;
