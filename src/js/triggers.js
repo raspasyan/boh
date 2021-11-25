@@ -138,5 +138,34 @@ function trigger(id, params) {
 
             break;
         }
+
+        case 'jump': {
+            // source
+            params.targetPos = getNearestPos(params.source, params.targetPos, true);
+
+            world.splashes.push({
+                'pos': params.source.pos,
+                'life': [0, 30],
+                'size': CELL_SIZE,
+                'sprite': SPRITES.PR_SPELL_BLUE,
+                'spriteRotation': true,
+                'fadeIn': true,
+                'points': [
+                    params.source.pos,
+                    getPosBetween(params.source.pos, params.targetPos),
+                    params.targetPos
+                ],
+                'onDrop': 'setPlayerPosition'
+            });
+
+            break;
+        }
+
+        case 'setPlayerPosition': {
+            // source
+            world.player.king.pos = [params.source.pos[0], params.source.pos[1]];
+
+            break;
+        }
     }
 }

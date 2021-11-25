@@ -48,6 +48,7 @@ const SPRITES = {
     PR_ARROW: [19, 6],
     PR_SPEAR: [20, 13],
     PR_FIRE: [11, 22],
+    PR_SPELL_BLUE: [19, 6],
     SIGN_01: [4, 2],
     SIGN_02: [5, 2],
     PEASANT: [17, 21],
@@ -78,7 +79,13 @@ let controller = {
     dragCreature: null
 }
 
-// LEVEL EDITOR
+let view = {
+    pos: [0, 0],
+    startPos: [0, 0],
+    width: 640,
+    height: 480
+};
+
 let editor = {
     'enabled': false,
     'mode': 'draw',
@@ -97,7 +104,6 @@ let editor = {
 let AI = 1;
 let DEBUG = 1;
 
-// Loading objects
 let world = localStorage.getItem("world");
 if (world) {
     world = JSON.parse(world);
@@ -128,18 +134,11 @@ if (world) {
 // world = JSON.parse(str);
 if (world.creatures.length) {
     let allyCreatures = world.creatures.filter(e => e.faction == world.player.faction);
-    if (allyCreatures.length) world.player.king = allyCreatures[0];
+    if (allyCreatures.length) {
+        world.player.king = allyCreatures[0];
+        view.pos = [Math.round(world.player.king.pos[0] - (view.width / 2)), Math.round(world.player.king.pos[1] - (view.height / 2))];
+    }
 }
-
-// Viewer
-let view = {
-    pos: [-320, -240],
-    startPos: [0, 0],
-    width: 640,
-    height: 480
-};
-
-let drawList = [];
 
 document.addEventListener("DOMContentLoaded", function () {
     let cvs = document.getElementById("game");
@@ -206,7 +205,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (e.code == "Space") controller.use   = true;
 
             if (e.code == "KeyE") {
-                trigger('fireStorm', {'targetPos': mouse.viewPos, 'source': world.player.king});
+                // trigger('fireStorm', {'targetPos': mouse.viewPos, 'source': world.player.king});
+                trigger('jump', {'targetPos': mouse.viewPos, 'source': world.player.king});
             }
         }
 
@@ -283,15 +283,6 @@ function onEnterFrameHandler(cvs, ctx) {
 
     if (editor.enabled) drawEditor(ctx);
 }
-
-// function render() {
-//     let drawLayers = [];
-//     drawList.forEach(e => {
-//         drawList[e.layer].push(e);
-//     });
-
-//     console.log(drawLayers);
-// }
 
 function drawSprites(ctx, sprites) {
     let spritesDown = sprites.filter(e => e.layer == 0);
@@ -1034,7 +1025,15 @@ function drawEditor(ctx) {
 }
 
 function drawUI(ctx) {
-    if (!editor.enabled) view.pos = [world.player.king.pos[0] - (view.width / 2), world.player.king.pos[1] - (view.height / 2)];
+    if (!editor.enabled) {
+        let shift = .05;
+        view.pos = [
+            Math.round((view.pos[0] + ((world.player.king.pos[0] - view.pos[0]) * shift)) - (view.width * shift / 2)),
+            Math.round((view.pos[1] + ((world.player.king.pos[1] - view.pos[1]) * shift)) - (view.height * shift / 2)),
+            // world.player.king.pos[0] - (view.width / 2), 
+            // world.player.king.pos[1] - (view.height / 2)
+        ];
+    }
 
     ctx.font = MD_FONT;
     ctx.textAlign = "left";
