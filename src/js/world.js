@@ -16,10 +16,12 @@ world = {
     'creatures': [
         // Герой
         {
+            'title': 'Hero',
             'type': 'creature',
             'pos': [CELL_SIZE * 0, CELL_SIZE * 0],
             'sprite': SPRITES.PEASANT,
             'healthSprite': SPRITES.HEART,
+            'portraitSprite': SPRITES.PT_SNAKE,
             'size': CELL_SIZE,
             'target': null,
             'speed': 2,
@@ -53,7 +55,7 @@ world = {
             'attack': [30, 30],
             'attackDamage': 1,
             'attackRange': CELL_SIZE * 4,
-            'attackPower': -1,
+            'attackPower': 1,
             'attackType': 'ranged',
             'attackSprite': SPRITES.PR_FIRE,
             'attackRotation': true,
@@ -63,7 +65,30 @@ world = {
                 'orcs'
             ],
             'color': COLORS.WHEAT,
+            'onHit': 'summonSkeleton',
             'onDrop': 'dropGold50'
+        },
+        // Скелет
+        {
+            'type': 'creature',
+            'pos': [0,0],
+            'sprite': [0,0],
+            'size': CELL_SIZE,
+            'target': null,
+            'speed': 2,
+            'hp': [5, 5],
+            'attack': [30, 30],
+            'attackDamage': 1,
+            'attackRange': CELL_SIZE * 2,
+            'attackPower': 1,
+            'attackType': 'melee',
+            'attackSprite': SPRITES.PR_SPEAR,
+            'attackRotation': true,
+            'faction': 'evil',
+            'enemyFactions': [
+                'ally',
+                'orcs'
+            ]
         },
         // Орочий босс
         {

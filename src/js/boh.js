@@ -25,36 +25,6 @@ const COLORS = {
     WHEAT: "wheat"
 }
 
-// const SPRITES = {
-//     KEY: [16, 9],
-//     BOX: [16, 4],
-//     COIN: [16, 7],
-//     HEART: [17, 7],
-//     SWORD: [16, 8],
-//     HELMET: [17, 8],
-//     CROWN: [17, 9],
-//     MEAT: [18, 7],
-//     ORE: [18, 8],
-//     CHEST: [6, 5],
-//     GOLDEN_CHEST: [7, 5],
-//     ORE_MINE: [4, 7],
-//     CRYSTALL: [18, 9],
-//     CRYSTALL_MINE: [6, 7],
-//     GOLD_MINE: [5, 7],
-//     HOUSE_01: [12, 9],
-//     TOMB_01: [4, 3],
-//     ROGUE: [2, 6],
-//     PR_SWORD: [17, 5],
-//     PR_ARROW: [16, 5],
-//     PR_SPEAR: [18, 5],
-//     SIGN_01: [4, 4],
-//     SIGN_02: [5, 4],
-//     PEASANT: [3, 10],
-//     SKELETON: [2, 9],
-//     ORC: [2, 5],
-//     I_SWORD_01: [19, 18],
-//     I_ARMOR_01: [18, 17]
-// }
 const SPRITES = {
     KEY: [24, 11],
     BOX: [1, 2],
@@ -76,7 +46,7 @@ const SPRITES = {
     ROGUE: [17, 22],
     PR_SWORD: [20, 3],
     PR_ARROW: [19, 6],
-    PR_SPEAR: [20, 3],
+    PR_SPEAR: [20, 13],
     PR_FIRE: [11, 22],
     SIGN_01: [4, 2],
     SIGN_02: [5, 2],
@@ -84,7 +54,8 @@ const SPRITES = {
     SKELETON: [17, 12],
     ORC: [17, 7],
     I_SWORD_01: [21, 3],
-    I_ARMOR_01: [24, 3]
+    I_ARMOR_01: [24, 3],
+    PT_SNAKE: [12, 2]
 }
 
 const DEFAULT_SIGHT = CELL_SIZE * 4;
@@ -186,18 +157,21 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     cvs.addEventListener("mousemove", e => {
         mouse.pos = getMousePos(cvs, e);
+        mouse.viewPos = vAdd(mouse.pos, view.pos);
+
         if (controller.mouse && (!mouse.lastPos || mouse.pos[0] != mouse.lastPos[0] || mouse.pos[1] != mouse.lastPos[1])) onDragHandler();
     });
     cvs.addEventListener("mouseup", e => {
         controller.mouse = false;
-        controller.dragMap = false,
-        controller.selectedObj = null;
+        controller.dragMap = false;
     });
     document.addEventListener("mouseup", function (e) {
         controller.mouse = false;
     });
     document.body.addEventListener("keydown", e => {
-        console.log(e.code);
+        // console.log(e.code);
+        if (e.code == 'KeyQ') editor.enabled = !editor.enabled;
+
         if (editor.enabled) {
             if (e.code == 'KeyW') if (editor.sprite[1]) editor.sprite[1]--;
             if (e.code == 'KeyD') if (editor.sprite[0] >= 0) editor.sprite[0]++;
@@ -230,6 +204,10 @@ document.addEventListener("DOMContentLoaded", function () {
             if (e.code == "KeyA") controller.left   = true;
             if (e.code == "KeyD") controller.right  = true;
             if (e.code == "Space") controller.use   = true;
+
+            if (e.code == "KeyE") {
+                trigger('fireStorm', {'targetPos': mouse.viewPos, 'source': world.player.king});
+            }
         }
 
         if (e.code == "Space") {
@@ -237,7 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
             localStorage.setItem("world", JSON.stringify(world));
         }
     });
-    document.body.addEventListener("keyup", function (e) {
+    document.body.addEventListener("keyup", e => {
         if (editor.enabled) {
             if (e.code == "ShiftLeft") editor.viewMode = true;
             if (e.code == "ControlLeft") {
@@ -269,6 +247,7 @@ function onEnterFrameHandler(cvs, ctx) {
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
     if (!editor.enabled) handlePlayer();
+    controller.selectedObj = null;
 
     // Draw sprites
     if (world.sprites.length) drawSprites(ctx, world.sprites);
@@ -354,19 +333,16 @@ function drawProjectiles(ctx, projectiles) {
                 let cf = (projectile.pos[1] < nextPos[1] ? -1 : 1);
                 let angle = rad * cf * 180 / Math.PI;
 
+                ctx.save();
+                if (projectile.life[0] <= Math.round(projectile.life[1] / 2)) ctx.globalAlpha = projectile.life[0] / Math.round(projectile.life[1] / 2);
                 if (projectile.rotation != undefined && projectile.rotation) {
-                    ctx.save();
                     ctx.translate(Math.round(projectile.pos[0] - view.pos[0]), Math.round(projectile.pos[1] - view.pos[1]));
                     ctx.rotate((-0 - angle) * Math.PI / 180);
-                    if (projectile.life[0] <= Math.round(projectile.life[1] / 2)) ctx.globalAlpha = projectile.life[0] / Math.round(projectile.life[1] / 2);
                     ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(projectile.size / 2) , - Math.round(projectile.size / 2), projectile.size, projectile.size);
-                    ctx.restore();
                 } else {
-                    ctx.save();
-                    if (projectile.life[0] <= Math.round(projectile.life[1] / 2)) ctx.globalAlpha = projectile.life[0] / Math.round(projectile.life[1] / 2);
                     ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(projectile.pos[0] - Math.round(projectile.size / 2) - view.pos[0]), Math.round(projectile.pos[1] - Math.round(projectile.size / 2) - view.pos[1]), projectile.size, projectile.size);
-                    ctx.restore();
                 }
+                ctx.restore();
 
                 if (DEBUG) {
                     ctx.strokeStyle = "red";
@@ -389,31 +365,32 @@ function drawProjectiles(ctx, projectiles) {
         } else {
             let foes = world.creatures.filter(creature => creature.faction != projectile.owner.faction && vLength(vSub(projectile.pos, creature.pos)) <= ((projectile.size + creature.size) / 2));
             if (foes.length) foes.forEach(foe => {
-                let damage = (projectile.owner.attackDamage <= foe.hp[0] ? projectile.owner.attackDamage : foe.hp[0]);
+                let attackDamage = (projectile.owner ? projectile.owner.attackDamage : projectile.attackDamage);
+                let attackPower = (projectile.owner ? projectile.owner.attackPower : projectile.attackPower);
+                let damage = (attackDamage <= foe.hp[0] ? attackDamage : foe.hp[0]);
                 foe.hp[0] -= damage;
-                if (projectile.owner.attackPower) foe.sp = vMultScalar(vNormal(vSub(projectile.pos, foe.pos)), -projectile.owner.attackPower);
+                if (attackPower) foe.sp = vMultScalar(vNormal(vSub(projectile.pos, foe.pos)), -attackPower);
 
-                let count = damage;
-                while (count) {
-                    let randomPos = [foe.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, foe.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-                    world.splashes.push({
-                        'pos': foe.pos,
-                        'life': [0, 30],
-                        'size': ICONS_SIZE,
-                        'sprite': foe.healthSprite,
-                        'fadeOut': true,
-                        'points': [
-                            foe.pos,
-                            getPosBetween(foe.pos, randomPos),
-                            randomPos,
-                        ]
-                    });
+                let randomPos = [foe.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, foe.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                world.splashes.push({
+                    'pos': foe.pos,
+                    'life': [0, 30],
+                    'size': ICONS_SIZE,
+                    'text': String(damage),
+                    'color': 'gold',
+                    'shadowColor': 'crimson',
+                    'fadeOut': true,
+                    'points': [
+                        foe.pos,
+                        getPosBetween(foe.pos, randomPos),
+                        randomPos,
+                    ]
+                });
 
-                    if (foe.onHit != undefined) foe.onHit(foe, projectile);
-                    
-                    count--;
-                }
-            })
+                if (foe.onHit != undefined) trigger(foe.onHit, {'source': foe,'projectile': projectile});
+                // foe.onHit(foe, projectile);
+            });
+            if (projectile.onDrop != undefined) trigger(projectile.onDrop, {'source': projectile});
 
             dropObj(projectiles, projectile);
         }
@@ -788,6 +765,7 @@ function drawCreatures(ctx, creatures) {
                     if (currentCreature.boxAnimation == undefined) currentCreature.boxAnimation = 0;
                     currentCreature.boxAnimation += .1;
                     selected = true;
+                    controller.selectedObj = currentCreature;
                 }
                 
                 if (currentCreature.speed) {
@@ -845,50 +823,55 @@ function drawCreatures(ctx, creatures) {
                     );
                 }
 
-                if (currentCreature.hp[0] != undefined) {
-                    ctx.drawImage(TILESET, currentCreature.healthSprite[0] * SPRITE_SIZE, currentCreature.healthSprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                        Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .25) - view.pos[0]),
-                        Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 2.2) - view.pos[1]),
-                        CELL_SIZE / 2, CELL_SIZE / 2
-                    );
-                    ctx.fillStyle = currentCreature.color;
-                    ctx.fillText((currentCreature.hp[0] == currentCreature.hp[1] ? currentCreature.hp[0] : currentCreature.hp[0] + "/" + currentCreature.hp[1]),
-                        currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
-                        currentCreature.pos[1] + Math.round(CELL_SIZE * .75) - view.pos[1]
-                    );
-                }
-
-                if (selected && currentCreature.attackDamage) {
-                    ctx.drawImage(TILESET, SPRITES.SWORD[0] * SPRITE_SIZE, SPRITES.SWORD[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                        Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 3) - Math.round(CELL_SIZE * .25) - view.pos[0]),
-                        Math.round(currentCreature.pos[1] + Math.round(CELL_SIZE / 2.5) * 2.5 - view.pos[1]),
-                        CELL_SIZE / 2, CELL_SIZE / 2
-                    );
-                    ctx.fillStyle = COLORS.GRAY;
-                    ctx.fillText(currentCreature.attackDamage,
-                        currentCreature.pos[0] + Math.round(CELL_SIZE / 3) - view.pos[0],
-                        currentCreature.pos[1] + Math.round(CELL_SIZE * .75) + Math.round(CELL_SIZE / 2) - view.pos[1]
-                    );
-                }
-
-                if (currentCreature.king != undefined && currentCreature.king) {
-                    if (currentCreature.kingAnimation == undefined) currentCreature.kingAnimation = Math.random() * 10;
-                    currentCreature.kingAnimation += .1;
-
-                    ctx.drawImage(TILESET, SPRITES.CROWN[0] * SPRITE_SIZE, SPRITES.CROWN[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, 
-                        Math.round(currentCreature.pos[0] - Math.round(CELL_SIZE / 2) - view.pos[0]  - Math.cos(currentCreature.kingAnimation) * 2),
-                        Math.round(currentCreature.pos[1] - Math.round(CELL_SIZE * 1.5) - view.pos[1] - Math.sin(currentCreature.kingAnimation) * 2),
-                        CELL_SIZE, CELL_SIZE
-                    );
-
-                    if (selected) {
-                        //
-                    }
-                }
-
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 0;
                 ctx.shadowColor = "";
+
+                if (currentCreature.hp[0] != undefined) {                    
+                    ctx.fillStyle = 'WHEAT';
+                    ctx.fillRect(
+                        Math.round(currentCreature.pos[0] - (CELL_SIZE / 2) - view.pos[0]),
+                        Math.round(currentCreature.pos[1] + (CELL_SIZE * .6) - view.pos[1]),
+                        CELL_SIZE,
+                        6
+                    );
+                    
+                    let hpState = currentCreature.hp[0] / currentCreature.hp[1];
+                    if (hpState >= .7) {
+                        if (currentCreature.hpBlinkAnimation != undefined) currentCreature.hpBlinkAnimation = undefined;
+
+                        ctx.fillStyle = '#4caf50';
+                    } else if (hpState >= .33) {
+                        if (currentCreature.hpBlinkAnimation != undefined) currentCreature.hpBlinkAnimation = undefined;
+
+                        ctx.fillStyle = '#e53935';
+                    } else {
+                        if (currentCreature.hpBlinkAnimation == undefined) currentCreature.hpBlinkAnimation = 0;
+                        currentCreature.hpBlinkAnimation += .1;
+
+                        ctx.fillStyle = '#e53935';
+                    }
+                    ctx.save();
+                    if (currentCreature.hpBlinkAnimation != undefined) ctx.globalAlpha = Math.abs(Math.cos(currentCreature.hpBlinkAnimation));
+                    ctx.fillRect(
+                        Math.round(currentCreature.pos[0] - (CELL_SIZE / 2) - view.pos[0] + 1),
+                        Math.round(currentCreature.pos[1] + (CELL_SIZE * .6) - view.pos[1] + 1),
+                        Math.round((currentCreature.hp[0] / currentCreature.hp[1]) * (CELL_SIZE - 2)),
+                        4
+                    );
+                    ctx.restore();
+
+                    ctx.fillStyle = 'white';
+                    ctx.save();
+                    ctx.globalAlpha = .5;
+                    ctx.fillRect(
+                        Math.round(currentCreature.pos[0] - (CELL_SIZE / 2) - view.pos[0]),
+                        Math.round(currentCreature.pos[1] + (CELL_SIZE * .6) - view.pos[1] + 1),
+                        CELL_SIZE,
+                        2
+                    );
+                    ctx.restore();
+                }
 
                 if (DEBUG) {
                     ctx.strokeStyle = (col ? "gold" : "lime");
@@ -907,7 +890,7 @@ function drawCreatures(ctx, creatures) {
                 }
             }
         } else {
-            if (currentCreature.onDrop != undefined) trigger(currentCreature, currentCreature.onDrop);
+            if (currentCreature.onDrop != undefined) trigger(currentCreature.onDrop, {'source': currentCreature});
 
             dropObj(world.creatures, currentCreature);
         }
@@ -951,8 +934,9 @@ function drawSplashes(ctx, splashes) {
                     ctx.fillStyle = splash.color;
                     ctx.shadowOffsetX = 1;
                     ctx.shadowOffsetY = 1;
-                    ctx.shadowColor = "black";
-                    ctx.fillText(splash.text.substr(0, Math.ceil(splash.text.length * (splash.life[0] / Math.ceil(splash.life[1] / 4)))), splash.pos[0] - view.pos[0], splash.pos[1] - view.pos[1] - CELL_SIZE / 2);
+                    ctx.shadowColor = (splash.shadowColor ? splash.shadowColor : "black");
+                    // ctx.fillText(splash.text.substr(0, Math.ceil(splash.text.length * (splash.life[0] / Math.ceil(splash.life[1] / 4)))), splash.pos[0] - view.pos[0], splash.pos[1] - view.pos[1] - CELL_SIZE / 2);
+                    ctx.fillText(splash.text, splash.pos[0] - view.pos[0], splash.pos[1] - view.pos[1] - CELL_SIZE / 2);
                     ctx.shadowOffsetX = 0;
                     ctx.shadowOffsetY = 0;
                     ctx.shadowColor = "";
@@ -963,7 +947,8 @@ function drawSplashes(ctx, splashes) {
             if (nextPos) splash.pos = nextPos;
             splash.life[0]++;
         } else {
-            if (splash.onDrop) splash.onDrop();
+            if (splash.onDrop) trigger(splash.onDrop, {'source': splash});
+
             dropObj(splashes, splash);
         }
     });
