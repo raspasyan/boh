@@ -16,22 +16,17 @@ world = {
     'creatures': [
         // Герой
         {
-            'title': 'Hero',
-            'type': 'creature',
-            'pos': [CELL_SIZE * 0, CELL_SIZE * 0],
-            'sprite': SPRITES.PEASANT,
-            'healthSprite': SPRITES.HEART,
-            'portraitSprite': SPRITES.PT_SNAKE,
+            'type': [0, 0],
+            'sprite': [0, 0],
             'size': CELL_SIZE,
-            'target': null,
             'speed': 2,
             'hp': [99, 99],
             'attack': [30, 30],
             'attackDamage': 1,
-            'attackRange': CELL_SIZE * 2,
+            'attackRange': CELL_SIZE * 6,
             'attackPower': 1,
-            'attackType': 'melee',
-            'attackSprite': SPRITES.PR_SWORD,
+            'attackType': 'ranged',
+            'attackSprite': SPRITES.PR_ARROW,
             'attackRotation': true,
             'faction': 'ally',
             'king': true,
@@ -39,19 +34,16 @@ world = {
                 'evil',
                 'orcs',
                 'mine'
-            ],
-            'color': '#cddc39'
+            ]
         },
         // Некромант
         {
             'type': 'creature',
-            'pos': [CELL_SIZE * 0, CELL_SIZE * -3],
-            'sprite': SPRITES.ROGUE,
-            'healthSprite': SPRITES.HEART,
+            'pos': [0,0],
+            'sprite': [0,0],
             'size': CELL_SIZE,
-            'target': null,
             'speed': 1.5,
-            'hp': [25, 25],
+            'hp': [10, 10],
             'attack': [30, 30],
             'attackDamage': 1,
             'attackRange': CELL_SIZE * 4,
@@ -64,9 +56,8 @@ world = {
                 'ally',
                 'orcs'
             ],
-            'color': COLORS.WHEAT,
-            'onHit': 'summonSkeleton',
-            'onDrop': 'dropGold50'
+            'onHitTrigger': 'summonSkeleton',
+            'onDropTrigger': 'dropGold50'
         },
         // Скелет
         {
@@ -74,7 +65,6 @@ world = {
             'pos': [0,0],
             'sprite': [0,0],
             'size': CELL_SIZE,
-            'target': null,
             'speed': 2,
             'hp': [5, 5],
             'attack': [30, 30],

@@ -45,7 +45,7 @@ const SPRITES = {
     TOMB_01: [4, 3],
     ROGUE: [17, 22],
     PR_SWORD: [20, 3],
-    PR_ARROW: [19, 6],
+    PR_ARROW: [19, 16],
     PR_SPEAR: [20, 13],
     PR_FIRE: [11, 22],
     PR_SPELL_BLUE: [19, 6],
@@ -59,7 +59,7 @@ const SPRITES = {
     PT_SNAKE: [12, 2]
 }
 
-const DEFAULT_SIGHT = CELL_SIZE * 4;
+const DEFAULT_SIGHT = CELL_SIZE * 6;
 
 let mouse = {
     pos: [0, 0],
@@ -83,7 +83,8 @@ let view = {
     pos: [0, 0],
     startPos: [0, 0],
     width: 640,
-    height: 480
+    height: 480,
+    shift: .1
 };
 
 let editor = {
@@ -101,7 +102,7 @@ let editor = {
 }
 
 // DEBUG
-let AI = 1;
+let AI = 0;
 let DEBUG = 1;
 
 let world = localStorage.getItem("world");
@@ -124,7 +125,6 @@ if (world) {
             }
         ],
         'creatures': [],
-        'projectiles': [],
         'blocks': [],
         'splashes': [],
         'items': [],
@@ -140,7 +140,7 @@ if (world.creatures.length) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
     let cvs = document.getElementById("game");
     let ctx = cvs.getContext("2d");
     ctx.imageSmoothingEnabled = false;
@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
         controller.mouse = false;
         controller.dragMap = false;
     });
-    document.addEventListener("mouseup", function (e) {
+    document.addEventListener("mouseup", e => {
         controller.mouse = false;
     });
     document.body.addEventListener("keydown", e => {
@@ -212,6 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (e.code == "Space") {
             console.info("SAVED");
+            world.splashes = [];
             localStorage.setItem("world", JSON.stringify(world));
         }
     });
@@ -260,9 +261,6 @@ function onEnterFrameHandler(cvs, ctx) {
 
     // Draw items
     if (world.items.length) drawItems(ctx, world.items);
-
-    // Draw projectiles
-    if (world.projectiles.length) drawProjectiles(ctx, world.projectiles);
 
     // Draw splashes
     if (world.splashes.length) drawSplashes(ctx, world.splashes);
@@ -313,79 +311,6 @@ function drawSprite(ctx, element) {
     } else {
         ctx.drawImage(TILESET, imageToDraw[0] * SPRITE_SIZE, imageToDraw[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(element.pos[0] - Math.round(element.size / 2) - view.pos[0]), Math.round(element.pos[1] - Math.round(element.size / 2) - view.pos[1]), element.size, element.size);
     }
-}
-
-function drawProjectiles(ctx, projectiles) {
-    projectiles.forEach(projectile => {
-        if (projectile.life[0] != projectile.life[1]) {
-            let nextPos = getNextPosByBezier(projectile.life[0] / projectile.life[1], projectile.points);        
-            if (inView(projectile.pos, projectile.size)) {
-                let rad = angleBetweenVectors(vNormal(vSub(projectile.pos, nextPos)), [-1,0]);
-                let cf = (projectile.pos[1] < nextPos[1] ? -1 : 1);
-                let angle = rad * cf * 180 / Math.PI;
-
-                ctx.save();
-                if (projectile.life[0] <= Math.round(projectile.life[1] / 2)) ctx.globalAlpha = projectile.life[0] / Math.round(projectile.life[1] / 2);
-                if (projectile.rotation != undefined && projectile.rotation) {
-                    ctx.translate(Math.round(projectile.pos[0] - view.pos[0]), Math.round(projectile.pos[1] - view.pos[1]));
-                    ctx.rotate((-0 - angle) * Math.PI / 180);
-                    ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, - Math.round(projectile.size / 2) , - Math.round(projectile.size / 2), projectile.size, projectile.size);
-                } else {
-                    ctx.drawImage(TILESET, projectile.sprite[0] * SPRITE_SIZE, projectile.sprite[1] * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE, Math.round(projectile.pos[0] - Math.round(projectile.size / 2) - view.pos[0]), Math.round(projectile.pos[1] - Math.round(projectile.size / 2) - view.pos[1]), projectile.size, projectile.size);
-                }
-                ctx.restore();
-
-                if (DEBUG) {
-                    ctx.strokeStyle = "red";
-                    ctx.beginPath();
-                    ctx.arc(projectile.pos[0] - view.pos[0], projectile.pos[1] - view.pos[1], 3, 0, Math.PI * 2, true);
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    ctx.strokeStyle = "#magenta";
-                    ctx.beginPath();
-                    ctx.moveTo(projectile.pos[0] - view.pos[0], projectile.pos[1] - view.pos[1]);
-                    ctx.lineTo(nextPos[0] - view.pos[0], nextPos[1] - view.pos[1]);
-                    ctx.closePath();
-                    ctx.stroke();
-                }
-            }
-            projectile.pos = nextPos;
-
-            projectile.life[0]++;
-        } else {
-            let foes = world.creatures.filter(creature => creature.faction != projectile.owner.faction && vLength(vSub(projectile.pos, creature.pos)) <= ((projectile.size + creature.size) / 2));
-            if (foes.length) foes.forEach(foe => {
-                let attackDamage = (projectile.owner ? projectile.owner.attackDamage : projectile.attackDamage);
-                let attackPower = (projectile.owner ? projectile.owner.attackPower : projectile.attackPower);
-                let damage = (attackDamage <= foe.hp[0] ? attackDamage : foe.hp[0]);
-                foe.hp[0] -= damage;
-                if (attackPower) foe.sp = vMultScalar(vNormal(vSub(projectile.pos, foe.pos)), -attackPower);
-
-                let randomPos = [foe.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, foe.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
-                world.splashes.push({
-                    'pos': foe.pos,
-                    'life': [0, 30],
-                    'size': ICONS_SIZE,
-                    'text': String(damage),
-                    'color': 'gold',
-                    'shadowColor': 'crimson',
-                    'fadeOut': true,
-                    'points': [
-                        foe.pos,
-                        getPosBetween(foe.pos, randomPos),
-                        randomPos,
-                    ]
-                });
-
-                if (foe.onHit != undefined) trigger(foe.onHit, {'source': foe,'projectile': projectile});
-                // foe.onHit(foe, projectile);
-            });
-            if (projectile.onDrop != undefined) trigger(projectile.onDrop, {'source': projectile});
-
-            dropObj(projectiles, projectile);
-        }
-    });
 }
 
 function drawItems(ctx, items) {
@@ -648,9 +573,8 @@ function drawCreatures(ctx, creatures) {
 
                     // Attack nearest foes
                     if (foe && vLength(vSub(currentCreature.pos, foe.pos)) <= currentCreature.attackRange + (CELL_SIZE / 4) && currentCreature.attack[0] == currentCreature.attack[1]) {
-                        let projectileTargetPos = foe.pos;
-                        // if (foe.target && Math.random() >= .5) projectileTargetPos = getNearestPos(foe, getNextPos(foe.pos, vNormal(vSub(foe.pos, foe.target)), 20));
-                        createProjectile(currentCreature, projectileTargetPos);
+                        let targetPos = foe.pos;
+                        createProjectile(currentCreature, targetPos);
                     }
                 }
 
@@ -827,20 +751,13 @@ function drawCreatures(ctx, creatures) {
                         6
                     );
                     
+                    ctx.fillStyle = (currentCreature.faction == world.player.faction ? '#4caf50' : '#e53935');
                     let hpState = currentCreature.hp[0] / currentCreature.hp[1];
-                    if (hpState >= .7) {
+                    if (hpState > .33) {
                         if (currentCreature.hpBlinkAnimation != undefined) currentCreature.hpBlinkAnimation = undefined;
-
-                        ctx.fillStyle = '#4caf50';
-                    } else if (hpState >= .33) {
-                        if (currentCreature.hpBlinkAnimation != undefined) currentCreature.hpBlinkAnimation = undefined;
-
-                        ctx.fillStyle = '#e53935';
                     } else {
                         if (currentCreature.hpBlinkAnimation == undefined) currentCreature.hpBlinkAnimation = 0;
                         currentCreature.hpBlinkAnimation += .1;
-
-                        ctx.fillStyle = '#e53935';
                     }
                     ctx.save();
                     if (currentCreature.hpBlinkAnimation != undefined) ctx.globalAlpha = Math.abs(Math.cos(currentCreature.hpBlinkAnimation));
@@ -881,7 +798,7 @@ function drawCreatures(ctx, creatures) {
                 }
             }
         } else {
-            if (currentCreature.onDrop != undefined) trigger(currentCreature.onDrop, {'source': currentCreature});
+            if (currentCreature.onDropTrigger != undefined) trigger(currentCreature.onDropTrigger, {'source': currentCreature});
 
             dropObj(world.creatures, currentCreature);
         }
@@ -938,7 +855,7 @@ function drawSplashes(ctx, splashes) {
             if (nextPos) splash.pos = nextPos;
             splash.life[0]++;
         } else {
-            if (splash.onDrop) trigger(splash.onDrop, {'source': splash});
+            if (splash.onDrop) splash.onDrop(splash);
 
             dropObj(splashes, splash);
         }
@@ -1025,15 +942,10 @@ function drawEditor(ctx) {
 }
 
 function drawUI(ctx) {
-    if (!editor.enabled) {
-        let shift = .05;
-        view.pos = [
-            Math.round((view.pos[0] + ((world.player.king.pos[0] - view.pos[0]) * shift)) - (view.width * shift / 2)),
-            Math.round((view.pos[1] + ((world.player.king.pos[1] - view.pos[1]) * shift)) - (view.height * shift / 2)),
-            // world.player.king.pos[0] - (view.width / 2), 
-            // world.player.king.pos[1] - (view.height / 2)
-        ];
-    }
+    if (!editor.enabled) view.pos = [
+        Math.round((view.pos[0] + ((world.player.king.pos[0] - view.pos[0]) * view.shift)) - (view.width * view.shift / 2)),
+        Math.round((view.pos[1] + ((world.player.king.pos[1] - view.pos[1]) * view.shift)) - (view.height * view.shift / 2)),
+    ];
 
     ctx.font = MD_FONT;
     ctx.textAlign = "left";
@@ -1188,7 +1100,8 @@ function handlePlayer() {
 
     let viewMousePos = vAdd(mouse.pos, view.pos);
     if (controller.mouse && world.player.king.attack[0] == world.player.king.attack[1]) {
-        let targetPos = getNextPos(world.player.king.pos, vNormal(vSub(world.player.king.pos, viewMousePos)), world.player.king.attackRange);
+        let targetPos = viewMousePos;
+        if (vLength(vSub(world.player.king.pos, viewMousePos)) > world.player.king.attackRange) targetPos = getNextPos(world.player.king.pos, vNormal(vSub(world.player.king.pos, viewMousePos)), world.player.king.attackRange);
         createProjectile(world.player.king, getNearestPos(world.player.king, targetPos, true));
     }
 }
@@ -1318,42 +1231,68 @@ function addDamageSplash(foePos, healthSprite) {
         'fadeOut': true
     });
 }
-function createProjectile(owner, projectileTargetPos) {
+function createProjectile(owner, targetPos) {
     owner.attack[0] = 0;
 
+    let points = null;
     switch (owner.attackType) {
         case "melee": {
-            world.projectiles.push({
-                'owner': owner,
-                'pos': owner.pos,
-                'sprite': owner.attackSprite,
-                'size': CELL_SIZE,
-                'points': [
-                    owner.pos,
-                    [projectileTargetPos[0] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2)), projectileTargetPos[1] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2))]
-                ],
-                'life': [0, 10],
-                'rotation': owner.attackRotation
-            });
+            points = [
+                [owner.pos[0], owner.pos[1]],
+                [targetPos[0] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2)), targetPos[1] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2))]
+            ];
 
             break;
         }
 
         case "ranged": {
-            world.projectiles.push({
-                'owner': owner,
-                'pos': owner.pos,
-                'sprite': owner.attackSprite,
-                'size': CELL_SIZE,
-                'points': [
-                    owner.pos,
-                    getPosBetween(owner.pos, projectileTargetPos),
-                    [projectileTargetPos[0] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2)), projectileTargetPos[1] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2))]
-                ],
-                'life': [0, 45],
-                'rotation': owner.attackRotation
-            });
+            points = [
+                [owner.pos[0], owner.pos[1]],
+                getPosBetween(owner.pos, targetPos),
+                [targetPos[0] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2)), targetPos[1] - (CELL_SIZE / 4) + (Math.random() * (CELL_SIZE / 2))]
+            ];
+
             break;
         }
     }
+
+    world.splashes.push({
+        'owner': owner,
+        'pos': owner.pos,
+        'sprite': owner.attackSprite,
+        'spriteRotation': true,
+        'size': CELL_SIZE,
+        'points': points,
+        'life': [0, 45],
+        'rotation': owner.attackRotation,
+        'faction': owner.faction,
+        'attackDamage': owner.attackDamage,
+        'attackPower': owner.attackPower,
+        'onDrop': self => {
+            let foes = world.creatures.filter(creature => creature.faction != self.faction && vLength(vSub(self.pos, creature.pos)) <= ((self.size + creature.size) / 2));
+            if (foes.length) foes.forEach(foe => {
+                let damage = (self.attackDamage <= foe.hp[0] ? self.attackDamage : foe.hp[0]);
+                foe.hp[0] -= damage;
+                if (self.attackPower) foe.sp = vMultScalar(vNormal(vSub(self.pos, foe.pos)), -self.attackPower);
+
+                let randomPos = [foe.pos[0] - CELL_SIZE + Math.random() * CELL_SIZE * 2, foe.pos[1] - CELL_SIZE + Math.random() * CELL_SIZE * 2];
+                world.splashes.push({
+                    'pos': foe.pos,
+                    'life': [0, 30],
+                    'size': ICONS_SIZE,
+                    'text': String(damage),
+                    'color': 'gold',
+                    'shadowColor': 'crimson',
+                    'fadeOut': true,
+                    'points': [
+                        foe.pos,
+                        getPosBetween(foe.pos, randomPos),
+                        randomPos,
+                    ]
+                });
+
+                if (foe.onHitTrigger != undefined) trigger(foe.onHitTrigger, {'source': foe, 'projectile': self});
+            });
+        }
+    });
 }

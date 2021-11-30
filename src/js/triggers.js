@@ -17,7 +17,16 @@ function trigger(id, params) {
                         getPosBetween(params.source.pos, randomPos),
                         randomPos,
                     ],
-                    'onDrop': 'createGold' 
+                    'onDrop': self => {
+                        world.items.push({
+                            'type': 'item',
+                            'itemType': 'gold',
+                            'pos': self.pos,
+                            'sprite': SPRITES.COIN,
+                            'size': ITEMS_SIZE_SM,
+                            'animation': Math.random(),
+                        });
+                    } 
                 });
                 goldCount--;
             }
@@ -25,23 +34,9 @@ function trigger(id, params) {
             break;
         }
 
-        case 'createGold': {
-            // source
-            world.items.push({
-                'type': 'item',
-                'itemType': 'gold',
-                'pos': params.source.pos,
-                'sprite': SPRITES.COIN,
-                'size': ITEMS_SIZE_SM,
-                'animation': Math.random(),
-            });
-
-            break;
-        }
-
         case 'summonSkeleton': {
             // source
-            if (Math.random() > .9) {
+            if (Math.random() > .1) {
                 let randomDir = vNormal(vSub(params.source.pos, [params.source.pos[0] + (-1 + Math.random() * 2), params.source.pos[1] + (-1 + Math.random() * 2)]));
                 let randomPos = getNearestPos(params.source, getNextPos(params.source.pos, randomDir, CELL_SIZE * 2));
                 world.splashes.push({
@@ -55,36 +50,31 @@ function trigger(id, params) {
                         getPosBetween(params.source.pos, randomPos),
                         randomPos,
                     ],
-                    'onDrop': 'createSkeleton'
+                    'onDrop': self => {
+                        world.creatures.push({
+                            'type': 'creature',
+                            'pos': self.pos,
+                            'sprite': self.sprite,
+                            'size': CELL_SIZE,
+                            'target': null,
+                            'speed': 2,
+                            'hp': [5, 5],
+                            'attack': [30, 30],
+                            'attackDamage': 1,
+                            'attackRange': CELL_SIZE * 2,
+                            'attackPower': 1,
+                            'attackType': 'melee',
+                            'attackSprite': SPRITES.PR_SPEAR,
+                            'attackRotation': true,
+                            'faction': 'evil',
+                            'enemyFactions': [
+                                'ally',
+                                'orcs'
+                            ]
+                        });
+                    }
                 });
             }
-
-            break;
-        }
-
-        case 'createSkeleton': {
-            // source
-            world.creatures.push({
-                'type': 'creature',
-                'pos': params.source.pos,
-                'sprite': params.source.sprite,
-                'size': CELL_SIZE,
-                'target': null,
-                'speed': 2,
-                'hp': [5, 5],
-                'attack': [30, 30],
-                'attackDamage': 1,
-                'attackRange': CELL_SIZE * 2,
-                'attackPower': 1,
-                'attackType': 'melee',
-                'attackSprite': SPRITES.PR_SPEAR,
-                'attackRotation': true,
-                'faction': 'evil',
-                'enemyFactions': [
-                    'ally',
-                    'orcs'
-                ]
-            });
 
             break;
         }
@@ -108,34 +98,29 @@ function trigger(id, params) {
                     ],
                     'life': [0, 45],
                     'rotation': params.source.attackRotation,
-                    'onDrop': 'deflect'
+                    'onDrop': self => {
+                        let randomDir = vNormal(vSub(self.pos, [self.pos[0] + (-1 + Math.random() * 2), self.pos[1] + (-1 + Math.random() * 2)]));
+                        let randomPos = getNearestPos(self, getNextPos(self.pos, randomDir, CELL_SIZE + Math.random() * CELL_SIZE), true);
+
+                        world.splashes.push({
+                            'pos': self.pos,
+                            'life': [0, 30],
+                            'size': self.size,
+                            'sprite': self.sprite,
+                            'spriteRotation': true,
+                            'fadeOut': true,
+                            'points': [
+                                self.pos,
+                                getPosBetween(self.pos, randomPos),
+                                randomPos,
+                            ]
+                        });
+                    }
                 });
 
                 count--;
             }
             
-            break;
-        }
-
-        case 'deflect': {
-            // source
-            let randomDir = vNormal(vSub(params.source.pos, [params.source.pos[0] + (-1 + Math.random() * 2), params.source.pos[1] + (-1 + Math.random() * 2)]));
-            let randomPos = getNearestPos(params.source, getNextPos(params.source.pos, randomDir, CELL_SIZE + Math.random() * CELL_SIZE), true);
-
-            world.splashes.push({
-                'pos': params.source.pos,
-                'life': [0, 30],
-                'size': params.source.size,
-                'sprite': params.source.sprite,
-                'spriteRotation': true,
-                'fadeOut': true,
-                'points': [
-                    params.source.pos,
-                    getPosBetween(params.source.pos, randomPos),
-                    randomPos,
-                ]
-            });
-
             break;
         }
 
@@ -155,15 +140,10 @@ function trigger(id, params) {
                     getPosBetween(params.source.pos, params.targetPos),
                     params.targetPos
                 ],
-                'onDrop': 'setPlayerPosition'
+                'onDrop': self => {
+                    world.player.king.pos = [self.pos[0], self.pos[1]];   
+                }
             });
-
-            break;
-        }
-
-        case 'setPlayerPosition': {
-            // source
-            world.player.king.pos = [params.source.pos[0], params.source.pos[1]];
 
             break;
         }
