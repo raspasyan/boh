@@ -324,7 +324,7 @@ function drawItems(ctx, items) {
 
                 world.splashes.push({
                     'pos': otherItem.pos,
-                    'life': [0, 10],
+                    'life': [0, 15],
                     'size': CELL_SIZE / 2,
                     'sprite': otherItem.sprite,
                     'fadeOut': true,
@@ -1263,7 +1263,7 @@ function createProjectile(owner, targetPos) {
         'spriteRotation': true,
         'size': CELL_SIZE,
         'points': points,
-        'life': [0, 45],
+        'life': [0, 15 + Math.round(vLength(vSub(owner.pos, targetPos)) / 15)],
         'rotation': owner.attackRotation,
         'faction': owner.faction,
         'attackDamage': owner.attackDamage,
