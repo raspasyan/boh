@@ -16,7 +16,7 @@ world = {
     'creatures': [
         // Герой
         {
-            'type': [0, 0],
+            'type': 'creature',
             'sprite': [0, 0],
             'size': CELL_SIZE,
             'speed': 2,

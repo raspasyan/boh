@@ -644,10 +644,10 @@ function drawCreatures(ctx, creatures) {
                     let dir = vNormal(vSub(currentCreature.pos, obstacle.pos));
                     let newPos = [];
                     if (obstacle.type == "creature") {
-                        newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.ceil((closestDistance - distanceBetween)) / (obstacle.speed ? 2 : 1));
+                        newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.ceil((closestDistance - distanceBetween) / (obstacle.speed ? 2 : 1)));
                         currentCreature.pos = newPos;
                     } else if (obstacle.type == "block" || obstacle.type == "store" || obstacle.type == "item" && obstacle.solid) {
-                        newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.round((closestDistance - distanceBetween)));
+                        newPos = getNextPos(currentCreature.pos, vMultScalar(dir, -1), Math.round(closestDistance - distanceBetween));
                         currentCreature.pos = newPos;
                     }
 
